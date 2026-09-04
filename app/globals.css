@@ -1,0 +1,110 @@
+/* =====================================================================
+   Buspulse — Design tokens
+   Navy + International Orange, echoing bus livery/road signage.
+   Signature motif: a "route-divider" (dashed animated line, like a
+   bus progressing on a route) and a "pulse" used only where something
+   is genuinely live right now (GPS broadcast, an armed/active SOS).
+   ===================================================================== */
+
+:root {
+  --navy: #1B2A38;
+  --navy-light: #2A3D4F;
+  --orange: #C0362C;
+  --orange-dark: #A32C23;
+  --fog: #E8ECEE;
+  --fog-dark: #D0D5D9;
+  --steel: #5C7080;
+  --steel-light: #97A6B0;
+  --green: #2E7D32;
+  --red: #C0362C;
+  --white: #FFFFFF;
+
+  --font-display: "Cairo", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 3px rgba(27, 42, 56, 0.08);
+  --shadow-md: 0 4px 16px rgba(27, 42, 56, 0.10);
+  --shadow-lg: 0 10px 30px rgba(27, 42, 56, 0.16);
+}
+
+* { box-sizing: border-box; }
+html { font-size: 17px; }
+body { font-family: var(--font-body); color: #22303C; background: var(--fog); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); }
+
+.route-divider {
+  height: 3px;
+  background-image: repeating-linear-gradient(90deg, var(--orange) 0 14px, transparent 14px 24px);
+  border-radius: 2px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: none; border-radius: var(--radius-sm); font-family: var(--font-body);
+  font-weight: 700; font-size: 1rem; padding: 12px 22px; cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--orange); color: white; }
+.btn-primary:hover { background: var(--orange-dark); }
+.btn-secondary { background: white; color: var(--navy); border: 1.5px solid var(--fog-dark); }
+.btn-secondary:hover { border-color: var(--steel); }
+
+.card { background: white; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.card-interactive:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); cursor: pointer; }
+
+.input {
+  width: 100%; padding: 11px 14px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--fog-dark); font-size: 1rem; font-family: var(--font-body);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(192, 54, 44, 0.12); }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: right;
+  padding: 13px 1.25rem; border: none; background: transparent; color: #B7C2CA;
+  font-size: 1rem; font-family: var(--font-body); cursor: pointer;
+  border-inline-start: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
+.nav-item.active { background: var(--navy-light); color: white; font-weight: 700; border-inline-start-color: var(--orange); }
+
+.nav-group-label {
+  padding: 14px 1.25rem 4px; font-size: 0.72rem; color: #6B7C88;
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+}
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.data-table th { text-align: right; padding: 11px 14px; background: var(--navy); color: white; font-weight: 700; }
+.data-table td { text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--fog); }
+.data-table tbody tr:hover { background: var(--fog); }
+.id-code { font-family: var(--font-mono); }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.badge-active, .badge-dot { background: transparent; }
+.badge-active { background: #E5F1E6; color: var(--green); }
+.badge-warning { background: #FBF3E3; color: #A97F28; }
+.badge-inactive { background: #EEF0F1; color: var(--steel); }
+.badge-danger { background: #FBEAEA; color: var(--red); }
+.badge .badge-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(192, 54, 44, 0.45); } 100% { box-shadow: 0 0 0 16px rgba(192, 54, 44, 0); } }
+@keyframes pulse-ring-green { 0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.45); } 100% { box-shadow: 0 0 0 14px rgba(46, 125, 50, 0); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.pulse-live { animation: pulse-ring-green 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.pulse-armed { animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.pulse-dot-indicator { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .card-interactive, .nav-item, .pulse-live, .pulse-armed, .pulse-dot-indicator { animation: none !important; transition: none !important; }
+}
+
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fade-in-up 0.35s ease both; }
