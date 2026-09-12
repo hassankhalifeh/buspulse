@@ -144,7 +144,7 @@ export default function AdminPage() {
 
   const FIELD_CONFIGS: Partial<Record<Section, FieldConfig[]>> = {
     buses: [
-      { key: "bus_id", label: "معرّف الحافلة", type: "text", required: true },
+      { key: "bus_id", label: "معرّف الحافلة", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "plate_number", label: "رقم اللوحة", type: "text", required: true },
       { key: "model", label: "الموديل", type: "text" },
       { key: "manufacture_year", label: "سنة الصنع", type: "number" },
@@ -152,7 +152,7 @@ export default function AdminPage() {
       { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشطة" }, { value: "In_Maintenance", label: "تحت الصيانة" }, { value: "Retired", label: "خارج الخدمة" }] },
     ],
     drivers: [
-      { key: "driver_id", label: "معرّف السائق", type: "text", required: true },
+      { key: "driver_id", label: "معرّف السائق", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "full_name", label: "الاسم الكامل", type: "text", required: true },
       { key: "phone", label: "الهاتف", type: "text" },
       { key: "license_number", label: "رقم رخصة القيادة", type: "text" },
@@ -163,7 +163,7 @@ export default function AdminPage() {
       { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشط" }, { value: "Inactive", label: "غير نشط" }] },
     ],
     contracts: [
-      { key: "contract_id", label: "معرّف العقد", type: "text", required: true },
+      { key: "contract_id", label: "معرّف العقد", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "contract_type", label: "نوع العقد", type: "select", required: true, options: [{ value: "Trip_Based", label: "مساري (رحلات)" }, { value: "Non_Trip_Lease", label: "تأجير حر" }] },
       { key: "client_name", label: "اسم العميل", type: "text", required: true },
       { key: "client_type", label: "نوع العميل", type: "select", required: true, options: [{ value: "School", label: "مدرسة" }, { value: "Company", label: "شركة" }, { value: "Individual", label: "فرد" }] },
@@ -175,13 +175,13 @@ export default function AdminPage() {
       { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشط" }, { value: "Completed", label: "منتهٍ" }, { value: "Cancelled", label: "ملغى" }] },
     ],
     guardians: [
-      { key: "guardian_id", label: "معرّف ولي الأمر", type: "text", required: true },
+      { key: "guardian_id", label: "معرّف ولي الأمر", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "full_name", label: "الاسم الكامل", type: "text", required: true },
       { key: "phone", label: "الهاتف", type: "text" },
       { key: "email", label: "البريد الإلكتروني", type: "text" },
     ],
     students: [
-      { key: "student_id", label: "معرّف الطالب", type: "text", required: true },
+      { key: "student_id", label: "معرّف الطالب", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "full_name", label: "اسم الطالب", type: "text", required: true },
       { key: "guardian_id", label: "ولي الأمر", type: "select", required: true, options: refGuardians },
       { key: "relation", label: "صلة القرابة", type: "select", required: true, options: [{ value: "Father", label: "أب" }, { value: "Mother", label: "أم" }, { value: "Grandfather", label: "جد" }, { value: "Uncle", label: "عم/خال" }, { value: "Other", label: "أخرى" }] },
