@@ -353,7 +353,31 @@ async function handleGenerateQr(entityType: "driver" | "guardian", entityId: str
         ) : section === "waExpenses" ? (
           waTenantId ? <WaExpensesPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
         ) : (
-          SECTION_QUERY[section] && <SimpleTable columns={SECTION_QUERY[section]!.columns} rows={rows} />
+                   SECTION_QUERY[section] && (
+            <SimpleTable
+              columns={SECTION_QUERY[section]!.columns}
+              rows={rows}
+              renderActions={
+                section === "drivers" || section === "guardians"
+                  ? (row) => (
+                      <button
+                        onClick={() =>
+                          handleGenerateQr(
+                            section === "drivers" ? "driver" : "guardian",
+                            section === "drivers" ? row.driver_id : row.guardian_id,
+                            row.full_name
+                          )
+                        }
+                        className="btn"
+                        style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+                      >
+                        توليد QR
+                      </button>
+                    )
+                  : undefined
+              }
+            />
+          )
         )}
       </main>
 
@@ -365,6 +389,20 @@ async function handleGenerateQr(entityType: "driver" | "guardian", entityId: str
           onSubmit={handleAddSubmit}
           onClose={() => setShowAddModal(false)}
         />
+      )}
+      {qrPanel && (
+        <div onClick={() => setQrPanel(null)} style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: "1.75rem", textAlign: "center", width: 320 }}>
+            <h3 style={{ marginBottom: 12 }}>رمز دخول {qrPanel.name}</h3>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPanel.url)}`}
+              alt="QR"
+              style={{ marginBottom: 12 }}
+            />
+            <input readOnly value={qrPanel.url} className="input" style={{ fontSize: "0.75rem", marginBottom: 12 }} onFocus={(e) => e.target.select()} />
+            <button onClick={() => setQrPanel(null)} className="btn btn-secondary" style={{ width: "100%" }}>إغلاق</button>
+          </div>
+        </div>
       )}
     </div>
   );
