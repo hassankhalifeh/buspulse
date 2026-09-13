@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function QrLoginPage() {
+function QrLoginInner() {
   const params = useSearchParams();
   const router = useRouter();
   const token = params.get("t");
@@ -40,7 +40,6 @@ export default function QrLoginPage() {
 
     if (fnError || data?.error) { setError(data?.error ?? "حدث خطأ."); return; }
 
-    // استخدام الـ Magic Link المُرجَع لفتح جلسة حقيقية
     const { error: sessionError } = await supabase.auth.verifyOtp({
       token_hash: data.token_hash, type: "magiclink",
     });
@@ -70,3 +69,7 @@ export default function QrLoginPage() {
     </main>
   );
 }
+
+export default function QrLoginPage() {
+  return (
+    <Suspense
