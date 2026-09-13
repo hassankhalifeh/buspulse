@@ -8,7 +8,7 @@ function QrLoginInner() {
   const params = useSearchParams();
   const router = useRouter();
   const token = params.get("t");
-  const entityType = params.get("type"); // "driver" | "guardian"
+  const entityType = params.get("type");
 
   const [status, setStatus] = useState<"loading" | "needs_setup" | "needs_pin" | "invalid">("loading");
   const [pin, setPin] = useState("");
@@ -72,4 +72,8 @@ function QrLoginInner() {
 
 export default function QrLoginPage() {
   return (
-    <Suspense
+    <Suspense fallback={<p style={{ padding: 24 }}>جارٍ التحميل...</p>}>
+      <QrLoginInner />
+    </Suspense>
+  );
+}
