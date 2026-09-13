@@ -349,7 +349,7 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
           <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)" }}>
             {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label}
           </h2>
-          {fields && (
+{fields && (
   <div style={{ display: "flex", gap: 8 }}>
     <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
     {!section.startsWith("wa") && section !== "pl" && section !== "permissions" && (
