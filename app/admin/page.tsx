@@ -81,6 +81,7 @@ export default function AdminPage() {
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [plRows, setPlRows] = useState<Record<string, any>[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [qrPanel, setQrPanel] = useState<{ name: string; url: string } | null>(null);
 
   const [refBuses, setRefBuses] = useState<{ value: string; label: string }[]>([]);
   const [refDrivers, setRefDrivers] = useState<{ value: string; label: string }[]>([]);
