@@ -291,7 +291,7 @@ async function handleGenerateQr(entityType: "driver" | "guardian", entityId: str
   const { data, error } = await supabase.functions.invoke("generate-qr", {
     body: { entity_type: entityType, entity_id: entityId },
   });
-  if (error || data?.error) { alert(data?.error ?? "تعذّر توليد الرمز."); return; }
+  if (error || data?.error) { alert(JSON.stringify({ error: error?.message, data })); return; }
   setQrPanel({ name, url: data.loginUrl });
 }
   return (
