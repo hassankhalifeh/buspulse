@@ -414,6 +414,16 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
           onClose={() => setShowAddModal(false)}
         />
       )}
+
+       {showImportModal && fields && (
+        <ImportModal
+          title={[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label ?? ""}
+          fields={fields}
+          onConfirm={handleImportConfirm}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
+      
       {qrPanel && (
         <div onClick={() => setQrPanel(null)} style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: "1.75rem", textAlign: "center", width: 320 }}>
