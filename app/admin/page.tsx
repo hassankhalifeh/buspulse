@@ -351,12 +351,7 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
           </h2>
 {fields && (
   <div style={{ display: "flex", gap: 8 }}>
-<div style={{ display: "flex", gap: 8 }}>
-  <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
-  {!section.startsWith("wa") && section !== "pl" && section !== "permissions" && (
-    <button onClick={() => setShowImportModal(true)} className="btn btn-secondary"><Upload size={16} /> استيراد Excel</button>
-  )}
-</div>
+    <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
     {!section.startsWith("wa") && section !== "pl" && section !== "permissions" && (
       <button onClick={() => setShowImportModal(true)} className="btn btn-secondary"><Upload size={16} /> استيراد Excel</button>
     )}
