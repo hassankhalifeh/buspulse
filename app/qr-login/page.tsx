@@ -38,7 +38,10 @@ function QrLoginInner() {
     });
     setSubmitting(false);
 
-    if (fnError || data?.error) { setError(data?.error ?? "حدث خطأ."); return; }
+    if (fnError || data?.error) {
+  setError(`تفاصيل: ${JSON.stringify({ fnError: fnError?.message, data })}`);
+  return;
+}
 
     const { error: sessionError } = await supabase.auth.verifyOtp({
       token_hash: data.token_hash, type: "magiclink",
