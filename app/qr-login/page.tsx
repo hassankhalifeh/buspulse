@@ -16,16 +16,15 @@ function QrLoginInner() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!token || !entityType) { setStatus("invalid"); return; }
-    const table = entityType === "driver" ? "drivers" : "guardians";
-    supabase.from(table).select("pin_hash").eq("qr_token", token).maybeSingle()
+    supabase.rpc("get_qr_login_status", { p_token: token, p_entity_type: entityType })
       .then(({ data }) => {
-        if (!data) { setStatus("invalid"); return; }
-        setStatus(data.pin_hash ? "needs_pin" : "needs_setup");
+        if (data === "invalid" || !data) { setStatus("invalid"); return; }
+        setStatus(data as "needs_pin" | "needs_setup");
       });
   }, [token, entityType]);
-
+  
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
