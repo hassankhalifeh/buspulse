@@ -15,6 +15,7 @@ import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
+import ImportModal from "./components/ImportModal";
 import WaPaymentsPanel from "./components/WaPaymentsPanel";
 import WaExpensesPanel from "./components/WaExpensesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
