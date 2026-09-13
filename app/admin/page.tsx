@@ -287,7 +287,13 @@ export default function AdminPage() {
     loadSectionRows();
     return { error: null };
   }
-
+async function handleGenerateQr(entityType: "driver" | "guardian", entityId: string, name: string) {
+  const { data, error } = await supabase.functions.invoke("generate-qr", {
+    body: { entity_type: entityType, entity_id: entityId },
+  });
+  if (error || data?.error) { alert(data?.error ?? "تعذّر توليد الرمز."); return; }
+  setQrPanel({ name, url: data.loginUrl });
+}
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <nav style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto" }}>
