@@ -21,7 +21,7 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 
 type Section =
-  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements"
+  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
 
@@ -35,6 +35,7 @@ const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "pl", label: "الأرباح والخسائر", icon: TrendingUp },
   { id: "announcements", label: "الإعلانات", icon: Megaphone },
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck },
+  { id: "loginActivity", label: "سجل الدخول", icon: History },
 ];
 
 // Only shown once this fleet has actually activated the WhatsApp
@@ -70,6 +71,7 @@ const SECTION_QUERY: Partial<Record<Section, { table: string; columns: Column[];
   waHolidays: { table: "wa_holidays", columns: [{ key: "holiday_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waExamSchedules: { table: "wa_class_exam_schedules", columns: [{ key: "class_level", label: "الصف" }, { key: "exam_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waOverrides: { table: "wa_daily_reminder_overrides", columns: [{ key: "scope_type", label: "النطاق" }, { key: "override_date", label: "التاريخ" }, { key: "is_enabled", label: "مفعّل" }], orderBy: "override_date" },
+  loginActivity: { table: "login_activity_log", columns: [{ key: "entity_type", label: "النوع" }, { key: "entity_id", label: "المعرّف" }, { key: "logged_in_at", label: "وقت الدخول" }], orderBy: "logged_in_at" },
 };
 
 export default function AdminPage() {
