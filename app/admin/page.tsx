@@ -85,6 +85,7 @@ export default function AdminPage() {
   const [plRows, setPlRows] = useState<Record<string, any>[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [qrPanel, setQrPanel] = useState<{ name: string; url: string } | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const [refBuses, setRefBuses] = useState<{ value: string; label: string }[]>([]);
   const [refDrivers, setRefDrivers] = useState<{ value: string; label: string }[]>([]);
@@ -297,6 +298,21 @@ async function handleGenerateQr(entityType: "driver" | "guardian", entityId: str
   if (error || data?.error) { alert(JSON.stringify({ error: error?.message, data })); return; }
   setQrPanel({ name, url: data.loginUrl });
 }
+
+async function handleImportConfirm(importRows: Record<string, any>[]) {
+  const cfg = SECTION_QUERY[section];
+  if (!cfg || !fleetId) return { successCount: 0, failCount: importRows.length, errors: ["تعذّر تحديد الأسطول"] };
+
+  let successCount = 0;
+  const errors: string[] = [];
+  for (const row of importRows) {
+    const { error } = await supabase.from(cfg.table).insert({ ...row, fleet_id: fleetId });
+    if (error) errors.push(`${row.full_name ?? row[Object.keys(row)[0]]}: ${error.message}`);
+    else successCount++;
+  }
+  loadSectionRows();
+  return { successCount, failCount: errors.length, errors };
+}
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <nav style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto" }}>
@@ -334,8 +350,13 @@ async function handleGenerateQr(entityType: "driver" | "guardian", entityId: str
             {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label}
           </h2>
           {fields && (
-            <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
-          )}
+  <div style={{ display: "flex", gap: 8 }}>
+    <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
+    {!section.startsWith("wa") && section !== "pl" && section !== "permissions" && (
+      <button onClick={() => setShowImportModal(true)} className="btn btn-secondary"><Upload size={16} /> استيراد Excel</button>
+    )}
+  </div>
+)}
         </div>
 
         {section === "pl" ? (
