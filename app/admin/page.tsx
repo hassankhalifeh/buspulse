@@ -441,6 +441,15 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
           onClose={() => setShowImportModal(false)}
         />
       )}
+      {editingRow && fields && (
+      <AddEntityModal
+        title={`تعديل ${[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label}`}
+        fields={fields.map((f) => (f.key === fields[0].key ? { ...f, disabled: true } : f))}
+        initialValues={editingRow}
+        onSubmit={handleEditSubmit}
+        onClose={() => setEditingRow(null)}
+      />
+    )}
       
       {qrPanel && (
         <div onClick={() => setQrPanel(null)} style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
