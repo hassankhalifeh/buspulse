@@ -355,14 +355,25 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
   loadSectionRows();
   return { successCount, failCount: errors.length, errors };
 }
-  async function handleEditSubmit(values: Record<string, any>) {
+async function handleEditSubmit(values: Record<string, any>) {
   const cfg = SECTION_QUERY[section];
   if (!cfg || !editingRow) return { error: "خطأ داخلي" };
   const idKey = fields![0].key;
+
+  if (section === "students" && values.contract_id) {
+    const { data: existing } = await supabase.from("students").select("full_name, student_id").eq("contract_id", values.contract_id);
+    const usedByOther = existing?.find((s) => s.student_id !== editingRow[idKey]);
+    if (usedByOther) {
+      const proceed = window.confirm(`⚠️ هذا العقد مستخدَم أصلاً من الطالب "${usedByOther.full_name}". هل تريد المتابعة رغم ذلك؟`);
+      if (!proceed) return { error: "تم الإلغاء." };
+    }
+  }
+
   const { error } = await supabase.from(cfg.table).update(values).eq(idKey, editingRow[idKey]);
   if (error) return { error: error.message };
   loadSectionRows();
   return { error: null };
+}
 }
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
