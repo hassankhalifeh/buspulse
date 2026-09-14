@@ -318,6 +318,15 @@ supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => set
     }
 
 if (section !== "studentRouteStops" && !fleetId) return { error: "تعذّر تحديد الأسطول الحالي — أعد تحميل الصفحة." };
+
+if (section === "students" && values.contract_id) {
+  const { data: existing } = await supabase.from("students").select("full_name").eq("contract_id", values.contract_id);
+  if (existing && existing.length > 0) {
+    const proceed = window.confirm(`⚠️ هذا العقد مستخدَم أصلاً من الطالب "${existing[0].full_name}". هل تريد المتابعة رغم ذلك؟`);
+    if (!proceed) return { error: "تم الإلغاء." };
+  }
+}
+
 const payload = section === "studentRouteStops" ? values : { ...values, fleet_id: fleetId };
 const { error } = await supabase.from(cfg.table).insert(payload);
     if (error) return { error: error.message };
