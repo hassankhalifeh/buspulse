@@ -315,6 +315,15 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
   loadSectionRows();
   return { successCount, failCount: errors.length, errors };
 }
+  async function handleEditSubmit(values: Record<string, any>) {
+  const cfg = SECTION_QUERY[section];
+  if (!cfg || !editingRow) return { error: "خطأ داخلي" };
+  const idKey = fields![0].key;
+  const { error } = await supabase.from(cfg.table).update(values).eq(idKey, editingRow[idKey]);
+  if (error) return { error: error.message };
+  loadSectionRows();
+  return { error: null };
+}
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <nav style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto" }}>
@@ -383,25 +392,32 @@ async function handleImportConfirm(importRows: Record<string, any>[]) {
             <SimpleTable
               columns={SECTION_QUERY[section]!.columns}
               rows={rows}
-              renderActions={
-                section === "drivers" || section === "guardians"
-                  ? (row) => (
-                      <button
-                        onClick={() =>
-                          handleGenerateQr(
-                            section === "drivers" ? "driver" : "guardian",
-                            section === "drivers" ? row.driver_id : row.guardian_id,
-                            row.full_name
-                          )
-                        }
-                        className="btn"
-                        style={{ fontSize: "0.8rem", padding: "6px 12px" }}
-                      >
-                        توليد QR
-                      </button>
-                    )
-                  : undefined
+             renderActions={
+  fields
+    ? (row) => (
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => setEditingRow(row)} className="btn" style={{ fontSize: "0.8rem", padding: "6px 12px" }}>
+            تعديل
+          </button>
+          {(section === "drivers" || section === "guardians") && (
+            <button
+              onClick={() =>
+                handleGenerateQr(
+                  section === "drivers" ? "driver" : "guardian",
+                  section === "drivers" ? row.driver_id : row.guardian_id,
+                  row.full_name
+                )
               }
+              className="btn"
+              style={{ fontSize: "0.8rem", padding: "6px 12px" }}
+            >
+              توليد QR
+            </button>
+          )}
+        </div>
+      )
+    : undefined
+}
             />
           )
         )}
