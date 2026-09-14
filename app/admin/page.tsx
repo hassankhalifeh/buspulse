@@ -22,14 +22,15 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 
 type Section =
-  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops"
+  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
-  { id: "routes", label: "المسارات", icon: MapPinned },
+{ id: "routes", label: "المسارات", icon: MapPinned },
   { id: "routeStops", label: "نقاط التوقف", icon: MapPinned },
+  { id: "studentRouteStops", label: "ربط طالب بمسار", icon: MapPinned },
   { id: "drivers", label: "السائقين", icon: Users },
   { id: "contracts", label: "العقود", icon: FileText },
   { id: "guardians", label: "أولياء الأمور", icon: UserRound },
@@ -61,6 +62,7 @@ const WA_SECTIONS: { id: Section; label: string; icon: any }[] = [
 
 const SECTION_QUERY: Partial<Record<Section, { table: string; columns: Column[]; orderBy?: string }>> = {
  routes: { table: "routes", columns: [{ key: "route_name", label: "اسم المسار" }, { key: "bus_id", label: "الحافلة" }, { key: "shift_type", label: "الدوام" }, { key: "scheduled_time", label: "الوقت" }, { key: "status", label: "الحالة" }] },
+studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id", label: "الطالب" }, { key: "route_id", label: "المسار" }, { key: "stop_id", label: "النقطة" }] },
   routeStops: { table: "route_stops", columns: [{ key: "stop_name", label: "اسم النقطة" }, { key: "route_id", label: "المسار" }, { key: "stop_order", label: "الترتيب" }] },
   buses: { table: "buses", columns: [{ key: "plate_number", label: "اللوحة" }, { key: "model", label: "الموديل" }, { key: "status", label: "الحالة" }] },
   drivers: { table: "drivers", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "salary_type", label: "نوع الأجر" }, { key: "status", label: "الحالة" }] },
@@ -100,6 +102,7 @@ const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
   const [refGuardians, setRefGuardians] = useState<{ value: string; label: string }[]>([]);
   const [refStudents, setRefStudents] = useState<{ value: string; label: string }[]>([]);
 const [refRoutes, setRefRoutes] = useState<{ value: string; label: string }[]>([]);
+const [refStops, setRefStops] = useState<{ value: string; label: string }[]>([]);
   const [refWaParents, setRefWaParents] = useState<{ value: string; label: string }[]>([]);
   const [refWaDrivers, setRefWaDrivers] = useState<{ value: string; label: string }[]>([]);
   const [refWaRoutes, setRefWaRoutes] = useState<{ value: string; label: string }[]>([]);
@@ -135,6 +138,7 @@ const [refRoutes, setRefRoutes] = useState<{ value: string; label: string }[]>([
     supabase.from("guardians").select("guardian_id, full_name").then(({ data }) => setRefGuardians((data ?? []).map((g) => ({ value: g.guardian_id, label: g.full_name }))));
     supabase.from("students").select("student_id, full_name").then(({ data }) => setRefStudents((data ?? []).map((s) => ({ value: s.student_id, label: s.full_name }))));
 supabase.from("routes").select("route_id, route_name").then(({ data }) => setRefRoutes((data ?? []).map((r) => ({ value: r.route_id, label: r.route_name }))));
+supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => setRefStops((data ?? []).map((s) => ({ value: s.stop_id, label: s.stop_name }))));
   }, [appUser, rows]);
 
   useEffect(() => {
@@ -172,6 +176,11 @@ supabase.from("routes").select("route_id, route_name").then(({ data }) => setRef
       { key: "shift_type", label: "الدوام", type: "select", required: true, options: [{ value: "Morning", label: "صباحي" }, { value: "Evening", label: "مسائي" }] },
       { key: "scheduled_time", label: "الوقت المجدول", type: "text", placeholder: "مثلاً 07:00" },
       { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشط" }, { value: "Inactive", label: "غير نشط" }] },
+    ],
+        studentRouteStops: [
+      { key: "student_id", label: "الطالب", type: "select", required: true, options: refStudents },
+      { key: "route_id", label: "المسار", type: "select", required: true, options: refRoutes },
+      { key: "stop_id", label: "نقطة التوقف", type: "select", required: true, options: refStops },
     ],
     routeStops: [
       { key: "stop_id", label: "معرّف النقطة", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
