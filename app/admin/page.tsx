@@ -317,8 +317,9 @@ supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => set
       return { error: null };
     }
 
-    if (!fleetId) return { error: "تعذّر تحديد الأسطول الحالي — أعد تحميل الصفحة." };
-    const { error } = await supabase.from(cfg.table).insert({ ...values, fleet_id: fleetId });
+if (section !== "studentRouteStops" && !fleetId) return { error: "تعذّر تحديد الأسطول الحالي — أعد تحميل الصفحة." };
+const payload = section === "studentRouteStops" ? values : { ...values, fleet_id: fleetId };
+const { error } = await supabase.from(cfg.table).insert(payload);
     if (error) return { error: error.message };
     loadSectionRows();
     return { error: null };
