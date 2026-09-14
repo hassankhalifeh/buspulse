@@ -99,6 +99,7 @@ const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
   const [refContracts, setRefContracts] = useState<{ value: string; label: string }[]>([]);
   const [refGuardians, setRefGuardians] = useState<{ value: string; label: string }[]>([]);
   const [refStudents, setRefStudents] = useState<{ value: string; label: string }[]>([]);
+const [refRoutes, setRefRoutes] = useState<{ value: string; label: string }[]>([]);
   const [refWaParents, setRefWaParents] = useState<{ value: string; label: string }[]>([]);
   const [refWaDrivers, setRefWaDrivers] = useState<{ value: string; label: string }[]>([]);
   const [refWaRoutes, setRefWaRoutes] = useState<{ value: string; label: string }[]>([]);
@@ -133,6 +134,7 @@ const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
     supabase.from("contracts").select("contract_id, client_name").then(({ data }) => setRefContracts((data ?? []).map((c) => ({ value: c.contract_id, label: c.client_name }))));
     supabase.from("guardians").select("guardian_id, full_name").then(({ data }) => setRefGuardians((data ?? []).map((g) => ({ value: g.guardian_id, label: g.full_name }))));
     supabase.from("students").select("student_id, full_name").then(({ data }) => setRefStudents((data ?? []).map((s) => ({ value: s.student_id, label: s.full_name }))));
+supabase.from("routes").select("route_id, route_name").then(({ data }) => setRefRoutes((data ?? []).map((r) => ({ value: r.route_id, label: r.route_name }))));
   }, [appUser, rows]);
 
   useEffect(() => {
@@ -162,6 +164,20 @@ const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
       { key: "manufacture_year", label: "سنة الصنع", type: "number" },
       { key: "capacity", label: "عدد المقاعد", type: "number" },
       { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشطة" }, { value: "In_Maintenance", label: "تحت الصيانة" }, { value: "Retired", label: "خارج الخدمة" }] },
+    ],
+    routes: [
+      { key: "route_id", label: "معرّف المسار", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
+      { key: "route_name", label: "اسم المسار", type: "text", required: true },
+      { key: "bus_id", label: "الحافلة", type: "select", required: true, options: refBuses },
+      { key: "shift_type", label: "الدوام", type: "select", required: true, options: [{ value: "Morning", label: "صباحي" }, { value: "Evening", label: "مسائي" }] },
+      { key: "scheduled_time", label: "الوقت المجدول", type: "text", placeholder: "مثلاً 07:00" },
+      { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشط" }, { value: "Inactive", label: "غير نشط" }] },
+    ],
+    routeStops: [
+      { key: "stop_id", label: "معرّف النقطة", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
+      { key: "stop_name", label: "اسم النقطة", type: "text", required: true },
+      { key: "route_id", label: "المسار", type: "select", required: true, options: refRoutes },
+      { key: "stop_order", label: "الترتيب", type: "number" },
     ],
     drivers: [
       { key: "driver_id", label: "معرّف السائق", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
