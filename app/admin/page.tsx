@@ -22,12 +22,14 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 
 type Section =
-  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity"
+  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
+  { id: "routes", label: "المسارات", icon: MapPinned },
+  { id: "routeStops", label: "نقاط التوقف", icon: MapPinned },
   { id: "drivers", label: "السائقين", icon: Users },
   { id: "contracts", label: "العقود", icon: FileText },
   { id: "guardians", label: "أولياء الأمور", icon: UserRound },
@@ -55,7 +57,11 @@ const WA_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "waHolidays", label: "العطل", icon: CalendarOff },
 ];
 
+
+
 const SECTION_QUERY: Partial<Record<Section, { table: string; columns: Column[]; orderBy?: string }>> = {
+ routes: { table: "routes", columns: [{ key: "route_name", label: "اسم المسار" }, { key: "bus_id", label: "الحافلة" }, { key: "shift_type", label: "الدوام" }, { key: "scheduled_time", label: "الوقت" }, { key: "status", label: "الحالة" }] },
+  routeStops: { table: "route_stops", columns: [{ key: "stop_name", label: "اسم النقطة" }, { key: "route_id", label: "المسار" }, { key: "stop_order", label: "الترتيب" }] },
   buses: { table: "buses", columns: [{ key: "plate_number", label: "اللوحة" }, { key: "model", label: "الموديل" }, { key: "status", label: "الحالة" }] },
   drivers: { table: "drivers", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "salary_type", label: "نوع الأجر" }, { key: "status", label: "الحالة" }] },
   contracts: { table: "contracts", columns: [{ key: "client_name", label: "العميل" }, { key: "contract_type", label: "نوع العقد" }, { key: "payment_cycle", label: "دورة الدفع" }, { key: "status", label: "الحالة" }] },
