@@ -24,7 +24,7 @@ function RegisterInner() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const FLEET_ID = "ضع_معرّف_الأسطول_هنا"; // TODO: استبدله بمعرّف الأسطول الحقيقي
+  const FLEET_ID = "9812348a-e836-4438-9bf4-26a801a467f1";
 
   useEffect(() => {
     if (!urlToken) return;
@@ -82,14 +82,6 @@ function RegisterInner() {
     );
   }
 
-  if (status === "rejected") {
-    // يسمح بإعادة المحاولة بفورم فارغ
-  }
-
-  if (status === "pending" && !error) {
-    // نعرض الفورم معبّأً (يسمح بالتعديل) بدل رسالة انتظار فقط، حسب التصميم المتفق عليه
-  }
-
   return (
     <main style={{ minHeight: "100vh", padding: "2rem 1rem" }}>
       <form onSubmit={submit} className="card fade-in" style={{ maxWidth: 480, margin: "0 auto", padding: "1.75rem" }}>
@@ -103,7 +95,7 @@ function RegisterInner() {
         <input placeholder="الاسم الكامل" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input" style={{ marginBottom: 10 }} />
         <input placeholder="رقم الهاتف" value={phone} onChange={(e) => setPhone(e.target.value)} className="input" style={{ marginBottom: 10 }} />
         <input placeholder="اسم المدرسة" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} className="input" style={{ marginBottom: 10 }} />
-        <input placeholder="العنوان" value={address} onChange={(e) => setAddress(e.target.value)} className="input" style={{ marginBottom: 16 }} />
+        <input placeholder="عنوان السكن" value={address} onChange={(e) => setAddress(e.target.value)} className="input" style={{ marginBottom: 16 }} />
 
         <p style={{ fontWeight: 700, marginBottom: 8 }}>الأبناء</p>
         {children.map((c, i) => (
