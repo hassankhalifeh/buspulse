@@ -373,7 +373,7 @@ async function handleEditSubmit(values: Record<string, any>) {
   if (error) return { error: error.message };
   loadSectionRows();
   return { error: null };
-}
+
 }
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
