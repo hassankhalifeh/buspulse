@@ -41,10 +41,11 @@ export default function RegistrationRequestsPanel() {
       const request = requests.find((r) => r.id === id);
       if (request) {
         // إنشاء ولي أمر حقيقي فوراً
-        const { data: guardian, error: gErr } = await supabase.from("guardians")
-          .insert({ full_name: request.full_name, phone: request.phone })
-          .select("guardian_id")
-          .single();
+       const { data: fleetRow } = await supabase.from("fleets").select("fleet_id").limit(1).single();
+const { data: guardian, error: gErr } = await supabase.from("guardians")
+  .insert({ full_name: request.full_name, phone: request.phone, fleet_id: fleetRow?.fleet_id })
+  .select("guardian_id")
+  .single();
         if (gErr) { alert("تمت الموافقة لكن فشل إنشاء ولي الأمر: " + gErr.message); }
         else {
           // توليد QR مباشرة له
