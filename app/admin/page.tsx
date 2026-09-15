@@ -20,9 +20,10 @@ import WaPaymentsPanel from "./components/WaPaymentsPanel";
 import WaExpensesPanel from "./components/WaExpensesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
+import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 
 type Section =
-  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops"
+  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
 
@@ -40,6 +41,7 @@ const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "announcements", label: "الإعلانات", icon: Megaphone },
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck },
   { id: "loginActivity", label: "سجل الدخول", icon: History },
+{ id: "registrationRequests", label: "طلبات التسجيل", icon: UserRound },
 ];
 
 // Only shown once this fleet has actually activated the WhatsApp
