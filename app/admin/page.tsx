@@ -438,10 +438,12 @@ async function handleEditSubmit(values: Record<string, any>) {
           waTenantId ? <RingSchedulePanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
         ) : section === "waPayments" ? (
           waTenantId ? <WaPaymentsPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
-        ) : section === "waExpenses" ? (
-          waTenantId ? <WaExpensesPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
-        ) : (
-                   SECTION_QUERY[section] && (
+) : section === "waExpenses" ? (
+  waTenantId ? <WaExpensesPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
+) : section === "registrationRequests" ? (
+  <RegistrationRequestsPanel />
+) : (
+          SECTION_QUERY[section] && (
             <SimpleTable
               columns={SECTION_QUERY[section]!.columns}
               rows={rows}
