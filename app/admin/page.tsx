@@ -23,7 +23,7 @@ import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 
 type Section =
-  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests"
+  | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
 
