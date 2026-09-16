@@ -152,7 +152,9 @@ supabase.from("contracts").select("contract_id, client_name").then(async ({ data
     supabase.from("guardians").select("guardian_id, full_name").then(({ data }) => setRefGuardians((data ?? []).map((g) => ({ value: g.guardian_id, label: g.full_name }))));
     supabase.from("students").select("student_id, full_name").then(({ data }) => setRefStudents((data ?? []).map((s) => ({ value: s.student_id, label: s.full_name }))));
 supabase.from("routes").select("route_id, route_name").then(({ data }) => setRefRoutes((data ?? []).map((r) => ({ value: r.route_id, label: r.route_name }))));
-supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => setRefStops((data ?? []).map((s) => ({ value: s.stop_id, label: s.stop_name }))));
+supabase.from("routes").select("route_id, route_name").then(({ data }) => setRefRoutes((data ?? []).map((r) => ({ value: r.route_id, label: r.route_name }))));
+supabase.from("clients").select("client_id, name").then(({ data }) => setRefClients((data ?? []).map((c) => ({ value: c.client_id, label: c.name }))));
+    supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => setRefStops((data ?? []).map((s) => ({ value: s.stop_id, label: s.stop_name }))));
   }, [appUser, rows]);
 
   useEffect(() => {
