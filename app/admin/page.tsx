@@ -107,6 +107,7 @@ const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
   const [refStudents, setRefStudents] = useState<{ value: string; label: string }[]>([]);
 const [refRoutes, setRefRoutes] = useState<{ value: string; label: string }[]>([]);
 const [refStops, setRefStops] = useState<{ value: string; label: string }[]>([]);
+  const [refClients, setRefClients] = useState<{ value: string; label: string }[]>([]);
   const [refWaParents, setRefWaParents] = useState<{ value: string; label: string }[]>([]);
   const [refWaDrivers, setRefWaDrivers] = useState<{ value: string; label: string }[]>([]);
   const [refWaRoutes, setRefWaRoutes] = useState<{ value: string; label: string }[]>([]);
