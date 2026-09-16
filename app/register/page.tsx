@@ -71,16 +71,24 @@ function RegisterInner() {
 
   if (loading) return <p style={{ padding: 24 }}>جارٍ التحقق...</p>;
 
-  if (status === "approved") {
-    return (
-      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div className="card" style={{ padding: "2rem", textAlign: "center", maxWidth: 400 }}>
-          <h2 style={{ color: "var(--green)", marginBottom: 10 }}>تمت الموافقة على طلبك ✓</h2>
-          <p>تواصل مع إدارة الأسطول للحصول على رابط الدخول الخاص بك.</p>
-        </div>
-      </main>
-    );
-  }
+ if (status === "approved") {
+  return (
+    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <form onSubmit={submitApprovedPin} className="card" style={{ padding: "2rem", textAlign: "center", maxWidth: 380, width: "100%" }}>
+        <h2 style={{ color: "var(--green)", marginBottom: 10 }}>تمت الموافقة على طلبك ✓</h2>
+        <p style={{ marginBottom: 16, fontSize: "0.9rem" }}>{needsPinSetup ? "اختر رقمك السري لإكمال الدخول" : "أدخل رقمك السري للدخول"}</p>
+        <input type="password" inputMode="numeric" placeholder="الرقم السري" value={loginPin} onChange={(e) => setLoginPin(e.target.value)} className="input" style={{ marginBottom: 10 }} />
+        {needsPinSetup && (
+          <input type="password" inputMode="numeric" placeholder="أعد كتابة الرقم" value={confirmLoginPin} onChange={(e) => setConfirmLoginPin(e.target.value)} className="input" style={{ marginBottom: 10 }} />
+        )}
+        {loginError && <p style={{ color: "var(--red)", fontSize: "0.85rem", marginBottom: 10 }}>{loginError}</p>}
+        <button type="submit" disabled={loginSubmitting} className="btn btn-primary" style={{ width: "100%" }}>
+          {loginSubmitting ? "..." : "دخول"}
+        </button>
+      </form>
+    </main>
+  );
+}
 
   return (
     <main style={{ minHeight: "100vh", padding: "2rem 1rem" }}>
