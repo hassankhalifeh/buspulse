@@ -169,10 +169,13 @@ supabase.from("clients").select("client_id, name").then(({ data }) => setRefClie
       .then(({ data }) => setRefWaStudents((data ?? []).map((s) => ({ value: s.id, label: s.student_name }))));
   }, [waTenantId, rows]);
 
-  if (loading) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
-  if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) {
-    return <p style={{ padding: 24, color: "var(--steel)" }}>هذه الصفحة مخصصة للإدارة فقط.</p>;
-  }
+ if (loading) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
+if (!appUser) {
+  return <AdminLoginForm />;
+}
+if (appUser.role !== "owner" && appUser.role !== "admin") {
+  return <p style={{ padding: 24, color: "var(--steel)" }}>هذه الصفحة مخصصة للإدارة فقط.</p>;
+}
 
   const existingIds = rows.map((r) => Object.values(r)[0] as string);
 
