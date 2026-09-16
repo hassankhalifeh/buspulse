@@ -136,7 +136,16 @@ const [refStops, setRefStops] = useState<{ value: string; label: string }[]>([])
     if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
     supabase.from("buses").select("bus_id, plate_number").then(({ data }) => setRefBuses((data ?? []).map((b) => ({ value: b.bus_id, label: b.plate_number }))));
     supabase.from("drivers").select("driver_id, full_name").then(({ data }) => setRefDrivers((data ?? []).map((d) => ({ value: d.driver_id, label: d.full_name }))));
-    supabase.from("contracts").select("contract_id, client_name").then(({ data }) => setRefContracts((data ?? []).map((c) => ({ value: c.contract_id, label: c.client_name }))));
+supabase.from("contracts").select("contract_id, client_name").then(async ({ data: contractsData }) => {
+  const { data: studentsData } = await supabase.from("students").select("contract_id, full_name");
+  const studentByContract = new Map((studentsData ?? []).map((s) => [s.contract_id, s.full_name]));
+  setRefContracts((contractsData ?? []).map((c) => ({
+    value: c.contract_id,
+    label: studentByContract.has(c.contract_id)
+      ? `${c.client_name} — ${studentByContract.get(c.contract_id)}`
+      : `${c.client_name} (بدون طالب مرتبط بعد)`,
+  })));
+});
     supabase.from("guardians").select("guardian_id, full_name").then(({ data }) => setRefGuardians((data ?? []).map((g) => ({ value: g.guardian_id, label: g.full_name }))));
     supabase.from("students").select("student_id, full_name").then(({ data }) => setRefStudents((data ?? []).map((s) => ({ value: s.student_id, label: s.full_name }))));
 supabase.from("routes").select("route_id, route_name").then(({ data }) => setRefRoutes((data ?? []).map((r) => ({ value: r.route_id, label: r.route_name }))));
