@@ -66,6 +66,7 @@ const WA_SECTIONS: { id: Section; label: string; icon: any }[] = [
 const SECTION_QUERY: Partial<Record<Section, { table: string; columns: Column[]; orderBy?: string }>> = {
  routes: { table: "routes", columns: [{ key: "route_name", label: "اسم المسار" }, { key: "bus_id", label: "الحافلة" }, { key: "shift_type", label: "الدوام" }, { key: "scheduled_time", label: "الوقت" }, { key: "status", label: "الحالة" }] },
 studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id", label: "الطالب" }, { key: "route_id", label: "المسار" }, { key: "stop_id", label: "النقطة" }] },
+  clients: { table: "clients", columns: [{ key: "name", label: "الاسم" }, { key: "client_type", label: "النوع" }, { key: "contact_phone", label: "الهاتف" }, { key: "status", label: "الحالة" }] },
   routeStops: { table: "route_stops", columns: [{ key: "stop_name", label: "اسم النقطة" }, { key: "route_id", label: "المسار" }, { key: "stop_order", label: "الترتيب" }] },
   buses: { table: "buses", columns: [{ key: "plate_number", label: "اللوحة" }, { key: "model", label: "الموديل" }, { key: "status", label: "الحالة" }] },
   drivers: { table: "drivers", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "salary_type", label: "نوع الأجر" }, { key: "status", label: "الحالة" }] },
@@ -173,6 +174,16 @@ supabase.from("route_stops").select("stop_id, stop_name").then(({ data }) => set
   const existingIds = rows.map((r) => Object.values(r)[0] as string);
 
   const FIELD_CONFIGS: Partial<Record<Section, FieldConfig[]>> = {
+clients: [
+  { key: "client_id", label: "معرّف العميل", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
+  { key: "name", label: "اسم العميل (مدرسة/شركة/فرد)", type: "text", required: true },
+  { key: "client_type", label: "نوع العميل", type: "select", required: true, options: [{ value: "School", label: "مدرسة" }, { value: "Company", label: "شركة" }, { value: "Individual", label: "فرد" }] },
+  { key: "contact_phone", label: "هاتف التواصل", type: "text" },
+  { key: "contact_email", label: "بريد إلكتروني", type: "text" },
+  { key: "address", label: "العنوان", type: "text" },
+  { key: "notes", label: "ملاحظات", type: "textarea" },
+  { key: "status", label: "الحالة", type: "select", options: [{ value: "Active", label: "نشط" }, { value: "Inactive", label: "غير نشط" }] },
+],
     buses: [
       { key: "bus_id", label: "معرّف الحافلة", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
       { key: "plate_number", label: "رقم اللوحة", type: "text", required: true },
