@@ -14,14 +14,8 @@ function RegisterInner() {
 
   const [accessToken, setAccessToken] = useState<string | null>(urlToken);
   const [loading, setLoading] = useState(!!urlToken);
-  const [status, setStatus] = useState<"new" | "pending" | "rejected" | "approved" | null>(urlToken ? null : "new");
-    const [accountId, setAccountId] = useState<string | null>(null);
-  const [needsPinSetup, setNeedsPinSetup] = useState(true);
-  const [loginPin, setLoginPin] = useState("");
-  const [confirmLoginPin, setConfirmLoginPin] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [loginSubmitting, setLoginSubmitting] = useState(false);
-    const [accountId, setAccountId] = useState<string | null>(null);
+    const [status, setStatus] = useState<"new" | "pending" | "rejected" | "approved" | null>(urlToken ? null : "new");
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [needsPinSetup, setNeedsPinSetup] = useState(true);
   const [loginPin, setLoginPin] = useState("");
   const [confirmLoginPin, setConfirmLoginPin] = useState("");
