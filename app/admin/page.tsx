@@ -21,6 +21,7 @@ import WaExpensesPanel from "./components/WaExpensesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
+import AdminLoginForm from "./components/AdminLoginForm";
 
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
