@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { BusFront, Mail, Lock } from "lucide-react";
 
@@ -51,6 +52,10 @@ export default function AdminLoginForm() {
         <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: "100%" }}>
           {submitting ? "جارٍ الدخول..." : "دخول"}
         </button>
+
+        <p style={{ textAlign: "center", marginTop: 14, fontSize: "0.85rem" }}>
+          <Link href="/forgot-password" style={{ color: "var(--steel)" }}>نسيت كلمة المرور؟</Link>
+        </p>
       </form>
     </main>
   );
