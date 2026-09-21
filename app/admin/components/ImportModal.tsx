@@ -50,7 +50,8 @@ export default function ImportModal({ title, fields, onConfirm, onClose }: Props
       const mapped = raw.map((row) => {
         const cleanRow: Record<string, any> = {};
         for (const key of Object.keys(row)) {
-          const matchedField = fields.find((f) => key.startsWith(f.key));
+          // المعرّفات التلقائية (disabled) تُولَّد في الخادم، فنتجاهل أي قيمة لها في الملف
+          const matchedField = fields.find((f) => !f.disabled && key.startsWith(f.key));
           if (matchedField) cleanRow[matchedField.key] = String(row[key]).trim();
         }
         return cleanRow;
