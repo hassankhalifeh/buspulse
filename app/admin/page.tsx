@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCurrentFleetId } from "@/lib/useCurrentFleetId";
@@ -475,6 +476,7 @@ async function handleEditSubmit(values: Record<string, any>) {
             <s.icon size={17} />{s.label}
           </button>
         ))}
+        <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
       <main className="fade-in" style={{ flex: 1, padding: "1.75rem", maxWidth: 1000 }}>

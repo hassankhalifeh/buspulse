@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { supabase } from "@/lib/supabaseClient";
@@ -33,6 +34,7 @@ export default function GuardianPage() {
 
   return (
     <main className="fade-in" style={{ maxWidth: 480, margin: "0 auto", padding: "1.75rem 1.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}><LogoutButton /></div>
       <h1 style={{ fontSize: "1.4rem", color: "var(--navy)", marginBottom: 4, fontWeight: 800 }}>مرحباً {appUser.full_name}</h1>
       <div className="route-divider" style={{ width: 90, marginBottom: 20 }} />
 

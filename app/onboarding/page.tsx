@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ export default function OnboardingPage() {
 
   const shell = (children: React.ReactNode) => (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ position: "fixed", top: 16, left: 16 }}><LogoutButton redirectTo="/admin" /></div>
       <div className="card fade-in" style={{ padding: "2rem", width: 460, maxWidth: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <div style={{ width: 42, height: 42, borderRadius: 11, background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>

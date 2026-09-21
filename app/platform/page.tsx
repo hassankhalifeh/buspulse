@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building2, KeyRound } from "lucide-react";
@@ -123,6 +124,7 @@ export default function PlatformPage() {
 
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: "1.75rem 1rem" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}><LogoutButton redirectTo="/admin" /></div>
       <Link href="/admin" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--steel)", fontSize: "0.88rem", marginBottom: 14 }}>
         <ArrowRight size={15} /> العودة إلى لوحة الإدارة
       </Link>
