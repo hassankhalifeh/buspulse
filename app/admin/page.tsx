@@ -21,6 +21,7 @@ import WaExpensesPanel from "./components/WaExpensesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
+import WaViolationsPanel from "./components/WaViolationsPanel";
 import AdminLoginForm from "./components/AdminLoginForm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,7 +32,7 @@ import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
-  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
+  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations";
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
@@ -64,6 +65,7 @@ const WA_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "waOverrides", label: "استثناءات يومية", icon: ToggleLeft },
   { id: "waBroadcasts", label: "سجل البث", icon: Radio },
   { id: "waMessages", label: "سجل الرسائل", icon: History },
+  { id: "waViolations", label: "مخالفات المحتوى", icon: ShieldCheck },
   { id: "waHolidays", label: "العطل", icon: CalendarOff },
 ];
 
@@ -456,9 +458,14 @@ async function handleEditSubmit(values: Record<string, any>) {
         )}
         {waAddonActive === false && waTenantId && (
           // The add-on is off, but the conversation archive stays readable: it is a permanent record.
-          <button onClick={() => setSection("waMessages")} className={`nav-item ${section === "waMessages" ? "active" : ""}`}>
-            <History size={17} />سجل الرسائل (أرشيف)
-          </button>
+          <>
+            <button onClick={() => setSection("waMessages")} className={`nav-item ${section === "waMessages" ? "active" : ""}`}>
+              <History size={17} />سجل الرسائل (أرشيف)
+            </button>
+            <button onClick={() => setSection("waViolations")} className={`nav-item ${section === "waViolations" ? "active" : ""}`}>
+              <ShieldCheck size={17} />مخالفات المحتوى (أرشيف)
+            </button>
+          </>
         )}
         {waAddonActive && waTenantId && WA_SECTIONS.map((s) => (
           <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
@@ -502,6 +509,8 @@ async function handleEditSubmit(values: Record<string, any>) {
           waTenantId ? <WaPaymentsPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
 ) : section === "waExpenses" ? (
   waTenantId ? <WaExpensesPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
+) : section === "waViolations" ? (
+  <WaViolationsPanel />
 ) : section === "registrationRequests" ? (
   <RegistrationRequestsPanel />
 ) : (

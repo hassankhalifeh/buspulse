@@ -15,10 +15,29 @@ interface FleetRow {
   whatsapp_module_expires_at: string | null;
   whatsapp_connection_status: string;
   whatsapp_connection_error: string | null;
+  pending_violations: number;
   logins: { role: string; login: string; real_email: boolean; must_change_password: boolean }[];
 }
 
 interface CreatedOwner { login: string; temp_password: string; real_email: boolean; warning: string | null }
+
+interface ViolationRow {
+  id: number;
+  fleet: string | null;
+  phone_number: string | null;
+  contact: { full_name: string | null; role: string } | null;
+  direction: "inbound" | "outbound" | "stored";
+  context: string;
+  content: string;
+  matched_terms: string[];
+  action_taken: string;
+  created_at: string;
+  review_status: "pending" | "confirmed" | "dismissed";
+  review_note: string | null;
+}
+
+const DIRECTION_LABEL: Record<ViolationRow["direction"], string> = { inbound: "واردة", outbound: "صادرة من البوت", stored: "بيانات مُدخلة" };
+const REVIEW_LABEL: Record<ViolationRow["review_status"], string> = { pending: "بانتظار المراجعة", confirmed: "مؤكَّدة", dismissed: "متجاهَلة" };
 
 const STATUS_LABEL: Record<string, string> = { trial: "تجريبي", active: "نشط", inactive: "موقوف" };
 const WA_LABEL: Record<string, string> = { not_configured: "غير مُعدّ", connected: "متصل", error: "خطأ", legacy_env: "إعداد الخادم" };
@@ -40,11 +59,29 @@ export default function PlatformPage() {
     return data as any;
   }, []);
 
+  const [violations, setViolations] = useState<ViolationRow[]>([]);
+  const [violationFilter, setViolationFilter] = useState<"pending" | "all">("pending");
+
+  const loadViolations = useCallback(async () => {
+    const data = await call({ action: "list_violations", status: violationFilter });
+    if (data?.error) return setMessage({ ok: false, text: data.error });
+    setViolations(data.violations ?? []);
+  }, [call, violationFilter]);
+
   const load = useCallback(async () => {
     const data = await call({ action: "list_fleets" });
     if (data?.error) return setMessage({ ok: false, text: data.error });
     setFleets(data.fleets ?? []);
-  }, [call]);
+    loadViolations();
+  }, [call, loadViolations]);
+
+  async function reviewViolation(id: number, status: "confirmed" | "dismissed") {
+    const note = window.prompt("ملاحظة المراجعة (اختياري):") ?? undefined;
+    if (note === undefined) return;
+    const data = await call({ action: "review_violation", id, status, note });
+    if (data?.error) return setMessage({ ok: false, text: data.error });
+    load();
+  }
 
   useEffect(() => {
     supabase.rpc("is_platform_admin").then(({ data }) => {
@@ -131,7 +168,7 @@ export default function PlatformPage() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={th}>الأسطول</th><th style={th}>الدخول</th><th style={th}>الحالة</th><th style={th}>خدمة الواتساب</th><th style={th}>إجراءات</th>
+                <th style={th}>الأسطول</th><th style={th}>الدخول</th><th style={th}>الحالة</th><th style={th}>خدمة الواتساب</th><th style={th}>مخالفات معلّقة</th><th style={th}>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -158,6 +195,7 @@ export default function PlatformPage() {
                       </>
                     ) : <span style={{ color: "var(--steel)" }}>غير مفعّلة</span>}
                   </td>
+                  <td style={{ ...td, color: f.pending_violations > 0 ? "var(--red)" : "var(--steel)", fontWeight: f.pending_violations > 0 ? 700 : 400 }}>{f.pending_violations}</td>
                   <td style={td}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
                       {f.whatsapp_module_enabled ? (
@@ -180,7 +218,45 @@ export default function PlatformPage() {
                   </td>
                 </tr>
               ))}
-              {fleets.length === 0 && <tr><td style={td} colSpan={5}>لا توجد أساطيل.</td></tr>}
+              {fleets.length === 0 && <tr><td style={td} colSpan={6}>لا توجد أساطيل.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: "1.5rem", marginTop: 18 }}>
+        <h2 style={{ fontSize: "1.1rem", color: "var(--navy)", margin: "0 0 4px" }}>مخالفات المحتوى (كل الأساطيل)</h2>
+        <p style={{ fontSize: "0.84rem", color: "var(--steel)", margin: "0 0 10px" }}>
+          كل رسالة أو إدخال يحتوي ألفاظاً غير لائقة يُمنع تلقائياً ويُسجَّل بنصه الأصلي بشكل دائم لا يُعدَّل ولا يُحذف. قرارك (تأكيد أو تجاهل) يُحفظ مع ملاحظتك ووقته.
+        </p>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button className={`btn ${violationFilter === "pending" ? "btn-primary" : "btn-secondary"}`} onClick={() => setViolationFilter("pending")}>بانتظار المراجعة</button>
+          <button className={`btn ${violationFilter === "all" ? "btn-primary" : "btn-secondary"}`} onClick={() => setViolationFilter("all")}>الكل</button>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr><th style={th}>الوقت</th><th style={th}>الأسطول</th><th style={th}>الشخص</th><th style={th}>النوع</th><th style={th}>المحتوى</th><th style={th}>المراجعة</th></tr></thead>
+            <tbody>
+              {violations.map((v) => (
+                <tr key={v.id}>
+                  <td style={td}>{new Date(v.created_at).toLocaleString("ar")}</td>
+                  <td style={td}>{v.fleet ?? "—"}</td>
+                  <td style={td}>{v.contact?.full_name ?? "—"}<div dir="ltr" style={{ textAlign: "start", fontSize: "0.76rem", color: "var(--steel)" }}>{v.phone_number ?? ""}</div></td>
+                  <td style={td}>{DIRECTION_LABEL[v.direction]}<div style={{ fontSize: "0.74rem", color: "var(--steel)" }}>{v.context}</div></td>
+                  <td style={{ ...td, maxWidth: 260, wordBreak: "break-word" }}>{v.content}<div style={{ fontSize: "0.74rem", color: "var(--red)" }}>{v.matched_terms.join("، ")}</div></td>
+                  <td style={td}>
+                    <div style={{ fontWeight: 600 }}>{REVIEW_LABEL[v.review_status]}</div>
+                    {v.review_note && <div style={{ fontSize: "0.78rem" }}>{v.review_note}</div>}
+                    {v.review_status === "pending" && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                        <button className="btn btn-primary" onClick={() => reviewViolation(v.id, "confirmed")}>تأكيد</button>
+                        <button className="btn btn-secondary" onClick={() => reviewViolation(v.id, "dismissed")}>تجاهل</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {violations.length === 0 && <tr><td style={td} colSpan={6}>لا توجد مخالفات {violationFilter === "pending" ? "بانتظار المراجعة" : "مسجّلة"}. 👍</td></tr>}
             </tbody>
           </table>
         </div>
