@@ -27,6 +27,15 @@ export default function FleetSettingsPage() {
       <Link href="/admin" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--steel)", fontSize: "0.88rem", marginBottom: 14 }}>
         <ArrowRight size={15} /> العودة إلى لوحة الإدارة
       </Link>
+      {fleet?.login_slug && (
+        <div className="card" style={{ padding: "1.25rem", marginBottom: 14 }}>
+          <h2 style={{ fontSize: "1rem", color: "var(--navy)", margin: "0 0 4px" }}>رابط دخول السائقين وأولياء الأمور بالهاتف</h2>
+          <p style={{ fontSize: "0.82rem", color: "var(--steel)", margin: "0 0 8px" }}>وزّع هذا الرابط الخاص بأسطولك فقط. لا يعمل الدخول بالرقم إلا من خلاله.</p>
+          <code dir="ltr" style={{ display: "block", wordBreak: "break-all", fontSize: "0.85rem" }}>
+            {typeof window !== "undefined" ? window.location.origin : ""}/phone-login?f={fleet.login_slug}
+          </code>
+        </div>
+      )}
       <div className="card" style={{ padding: "1.75rem" }}>
         <h1 style={{ fontSize: "1.25rem", color: "var(--navy)", margin: "0 0 4px" }}>إعدادات الأسطول</h1>
         <p style={{ fontSize: "0.88rem", color: "var(--steel)", margin: 0 }}>معلومات أسطولك كما تظهر في النظام.</p>
