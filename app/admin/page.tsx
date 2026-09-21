@@ -1,5 +1,6 @@
 "use client";
 
+import LocalQr from "./components/LocalQr";
 import LogoutButton from "@/app/components/LogoutButton";
 import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
@@ -588,11 +589,7 @@ async function handleEditSubmit(values: Record<string, any>) {
         <div onClick={() => setQrPanel(null)} style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: "1.75rem", textAlign: "center", width: 320 }}>
             <h3 style={{ marginBottom: 12 }}>رمز دخول {qrPanel.name}</h3>
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPanel.url)}`}
-              alt="QR"
-              style={{ marginBottom: 12 }}
-            />
+            <LocalQr text={qrPanel.url} />
             <input readOnly value={qrPanel.url} className="input" style={{ fontSize: "0.75rem", marginBottom: 12 }} onFocus={(e) => e.target.select()} />
             <button onClick={() => setQrPanel(null)} className="btn btn-secondary" style={{ width: "100%" }}>إغلاق</button>
           </div>
