@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { toLoginEmail } from "@/lib/authIdentity";
 import { BusFront, Mail, Lock } from "lucide-react";
 
 export default function AdminLoginForm() {
@@ -16,7 +17,8 @@ export default function AdminLoginForm() {
     setSubmitting(true);
     setError(null);
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    // "email" may be a real email or a plain username (mapped to its internal address).
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: toLoginEmail(email), password });
     if (authError || !authData.user) {
       setError(authError?.message ?? "تعذر تسجيل الدخول");
       setSubmitting(false);
@@ -38,9 +40,9 @@ export default function AdminLoginForm() {
         <p style={{ fontSize: "0.88rem", color: "var(--steel)", marginBottom: 22 }}>تسجيل دخول الإدارة</p>
 
         <label style={{ fontSize: "0.85rem", color: "#333", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-          <Mail size={14} /> البريد الإلكتروني
+          <Mail size={14} /> البريد الإلكتروني أو اسم المستخدم
         </label>
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input" style={{ margin: "6px 0 16px" }} />
+        <input type="text" dir="ltr" autoCapitalize="none" autoCorrect="off" required value={email} onChange={(e) => setEmail(e.target.value)} className="input" style={{ margin: "6px 0 16px" }} />
 
         <label style={{ fontSize: "0.85rem", color: "#333", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
           <Lock size={14} /> كلمة المرور

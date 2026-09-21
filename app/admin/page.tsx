@@ -21,12 +21,18 @@ import WaExpensesPanel from "./components/WaExpensesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
+import WaViolationsPanel from "./components/WaViolationsPanel";
 import AdminLoginForm from "./components/AdminLoginForm";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Settings, Building2 } from "lucide-react";
+import { useFleetInfo } from "@/lib/useFleetInfo";
+import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
-  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions";
+  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations";
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
@@ -59,6 +65,7 @@ const WA_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "waOverrides", label: "استثناءات يومية", icon: ToggleLeft },
   { id: "waBroadcasts", label: "سجل البث", icon: Radio },
   { id: "waMessages", label: "سجل الرسائل", icon: History },
+  { id: "waViolations", label: "مخالفات المحتوى", icon: ShieldCheck },
   { id: "waHolidays", label: "العطل", icon: CalendarOff },
 ];
 
@@ -81,7 +88,7 @@ studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id"
   waRoutes: { table: "wa_routes", columns: [{ key: "route_name", label: "اسم المسار" }, { key: "school_name", label: "المدرسة" }, { key: "default_bus_ref", label: "الحافلة الافتراضية" }] },
   waStudents: { table: "wa_students", columns: [{ key: "student_name", label: "اسم الطالب" }, { key: "class_level", label: "الصف" }, { key: "station", label: "المحطة" }, { key: "outstanding_debt", label: "الرصيد المستحق" }] },
   waBroadcasts: { table: "wa_broadcasts", columns: [{ key: "broadcast_type", label: "النوع" }, { key: "message_text", label: "النص" }, { key: "recipient_count", label: "عدد المستلمين" }, { key: "sent_at", label: "الوقت" }], orderBy: "sent_at" },
-  waMessages: { table: "wa_message_log", columns: [{ key: "phone_number", label: "الرقم" }, { key: "direction", label: "الاتجاه" }, { key: "message_type", label: "النوع" }, { key: "created_at", label: "الوقت" }], orderBy: "created_at" },
+  waMessages: { table: "wa_message_log", columns: [{ key: "phone_number", label: "الرقم" }, { key: "business_number", label: "رقم البوت" }, { key: "direction", label: "الاتجاه" }, { key: "message_type", label: "النوع" }, { key: "created_at", label: "الوقت" }], orderBy: "created_at" },
   waHolidays: { table: "wa_holidays", columns: [{ key: "holiday_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waExamSchedules: { table: "wa_class_exam_schedules", columns: [{ key: "class_level", label: "الصف" }, { key: "exam_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waOverrides: { table: "wa_daily_reminder_overrides", columns: [{ key: "scope_type", label: "النطاق" }, { key: "override_date", label: "التاريخ" }, { key: "is_enabled", label: "مفعّل" }], orderBy: "override_date" },
@@ -92,6 +99,23 @@ export default function AdminPage() {
   const { appUser, loading } = useAppUser();
   const fleetId = useCurrentFleetId(appUser);
   const waTenantId = useCurrentWaTenantId(fleetId);
+  const router = useRouter();
+  const { fleet: fleetInfo } = useFleetInfo(appUser);
+  const waAddonActive = useWhatsappAddon(appUser);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+
+  // A brand-new fleet owner must first replace the temporary password and enter the fleet's information.
+  useEffect(() => {
+    if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
+    if (appUser.must_change_password === true || (fleetInfo && fleetInfo.onboarding_completed === false)) {
+      router.replace("/onboarding");
+    }
+  }, [appUser, fleetInfo, router]);
+
+  useEffect(() => {
+    if (!appUser) return;
+    supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true));
+  }, [appUser]);
 
   const [section, setSection] = useState<Section>("buses");
   const [rows, setRows] = useState<Record<string, any>[]>([]);
@@ -421,13 +445,29 @@ async function handleEditSubmit(values: Record<string, any>) {
           </button>
         ))}
 
+        <p className="nav-group-label">الأسطول</p>
+        <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
+        {isPlatformAdmin && <Link href="/platform" className="nav-item"><Building2 size={17} />إدارة المنصة</Link>}
+
         <p className="nav-group-label">بوت الواتساب</p>
-        {waTenantId === null && (
+        <Link href="/admin/whatsapp" className="nav-item"><MessageCircle size={17} />إعداد خدمة الواتساب</Link>
+        {(waAddonActive === false || waTenantId === null) && (
           <p style={{ padding: "0 1.25rem", fontSize: "0.78rem", color: "#8B99A3" }}>
-            غير مفعّل لهذا الأسطول بعد.
+            {waAddonActive === false ? "الخدمة غير مفعّلة لأسطولك (خدمة إضافية)." : "أكمل إعداد الخدمة لتظهر الأقسام."}
           </p>
         )}
-        {waTenantId && WA_SECTIONS.map((s) => (
+        {waAddonActive === false && waTenantId && (
+          // The add-on is off, but the conversation archive stays readable: it is a permanent record.
+          <>
+            <button onClick={() => setSection("waMessages")} className={`nav-item ${section === "waMessages" ? "active" : ""}`}>
+              <History size={17} />سجل الرسائل (أرشيف)
+            </button>
+            <button onClick={() => setSection("waViolations")} className={`nav-item ${section === "waViolations" ? "active" : ""}`}>
+              <ShieldCheck size={17} />مخالفات المحتوى (أرشيف)
+            </button>
+          </>
+        )}
+        {waAddonActive && waTenantId && WA_SECTIONS.map((s) => (
           <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
             <s.icon size={17} />{s.label}
           </button>
@@ -469,6 +509,8 @@ async function handleEditSubmit(values: Record<string, any>) {
           waTenantId ? <WaPaymentsPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
 ) : section === "waExpenses" ? (
   waTenantId ? <WaExpensesPanel waTenantId={waTenantId} /> : <p style={{ color: "var(--steel)" }}>وحدة الواتساب غير مفعّلة لهذا الأسطول.</p>
+) : section === "waViolations" ? (
+  <WaViolationsPanel />
 ) : section === "registrationRequests" ? (
   <RegistrationRequestsPanel />
 ) : (
