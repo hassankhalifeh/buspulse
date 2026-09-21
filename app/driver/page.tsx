@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { supabase } from "@/lib/supabaseClient";
@@ -59,11 +60,14 @@ export default function DriverPage() {
             </p>
           </div>
         </div>
+        <div style={{ display: "flex", gap: 8 }}>
         {assignedBuses && assignedBuses.length > 1 && (
           <button onClick={() => setActiveBus(null)} className="btn" style={{ background: "rgba(255,255,255,0.08)", color: "white", padding: "8px 14px", fontSize: "0.85rem" }}>
             <Repeat size={14} /> تبديل الحافلة
           </button>
         )}
+        <LogoutButton variant="light" />
+        </div>
       </header>
 
       <main className="fade-in" style={{ maxWidth: 480, margin: "0 auto", padding: "1.25rem 1rem" }}>

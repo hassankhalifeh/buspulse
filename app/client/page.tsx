@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutButton from "@/app/components/LogoutButton";
 import { useEffect, useMemo, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { supabase } from "@/lib/supabaseClient";
@@ -97,6 +98,7 @@ export default function ClientPortalPage() {
 
   return (
     <main className="fade-in" style={{ maxWidth: 820, margin: "0 auto", padding: "1.75rem 1.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}><LogoutButton /></div>
       <h1 style={{ fontSize: "1.4rem", color: "var(--navy)", marginBottom: 4, fontWeight: 800 }}>
         متابعة الرحلات{school ? ` — ${school.school_name}` : ""}
       </h1>
