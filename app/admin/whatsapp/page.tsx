@@ -18,6 +18,16 @@ interface WaStatus {
   verify_token: string | null;
 }
 
+interface NumberEvent {
+  id: number;
+  event: "connected" | "changed" | "disconnected";
+  from_business_number: string | null;
+  to_business_number: string | null;
+  created_at: string;
+}
+
+const EVENT_LABEL: Record<NumberEvent["event"], string> = { connected: "ربط رقم", changed: "تغيير الرقم", disconnected: "فصل الرقم" };
+
 const STATUS_LABEL: Record<WaStatus["connection_status"], { text: string; color: string }> = {
   not_configured: { text: "غير مُعدّ", color: "var(--steel)" },
   connected: { text: "متصل ✓", color: "green" },
@@ -37,6 +47,12 @@ export default function WhatsappSetupPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [form, setForm] = useState({ business_number: "", phone_number_id: "", access_token: "", app_secret: "" });
+  const [history, setHistory] = useState<NumberEvent[]>([]);
+
+  const loadHistory = useCallback(async () => {
+    const { data } = await supabase.from("wa_number_history").select("*").order("created_at", { ascending: false }).limit(50);
+    setHistory((data as NumberEvent[]) ?? []);
+  }, []);
 
   const call = useCallback(async (action: string, extra: Record<string, unknown> = {}) => {
     const { data, error } = await supabase.functions.invoke("wa-tenant-setup", { body: { action, ...extra } });
@@ -51,8 +67,11 @@ export default function WhatsappSetupPage() {
   }, [call]);
 
   useEffect(() => {
-    if (appUser && (appUser.role === "owner" || appUser.role === "admin")) refresh();
-  }, [appUser, refresh]);
+    if (appUser && (appUser.role === "owner" || appUser.role === "admin")) {
+      refresh();
+      loadHistory();
+    }
+  }, [appUser, refresh, loadHistory]);
 
   async function run(action: string, extra: Record<string, unknown> = {}, okText?: string) {
     setBusy(true);
@@ -63,6 +82,17 @@ export default function WhatsappSetupPage() {
     if (data?.connection_status !== undefined) setStatus(data as WaStatus);
     if (okText) setMessage({ ok: true, text: okText });
     if (action === "save") setForm({ business_number: "", phone_number_id: "", access_token: "", app_secret: "" });
+    if (action === "save" || action === "disconnect") loadHistory();
+  }
+
+  // Changing the number never deletes anything: say so, and say what the fleet's contacts will be asked to do.
+  function saveWithConfirmation() {
+    const changing = status && status.connection_status !== "not_configured" && !!status.business_number && status.business_number.replace(/\s/g, "") !== form.business_number.replace(/\s/g, "");
+    if (changing && !window.confirm(
+      "تغيير رقم الواتساب لا يحذف أي شيء: كل محادثاتك ورسائلك السابقة تبقى محفوظة، ويُسجَّل أنها جرت عبر الرقم القديم.\n" +
+      "سيُطلب من السائقين وأولياء الأمور حفظ الرقم الجديد عند أول رسالة لهم. متابعة؟"
+    )) return;
+    run("save", form, "تم التحقق مع Meta وحفظ الإعداد ✓ (كل المحادثات السابقة محفوظة)");
   }
 
   if (loading) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
@@ -125,7 +155,7 @@ export default function WhatsappSetupPage() {
                 </div>
 
                 <form
-                  onSubmit={(e) => { e.preventDefault(); run("save", form, "تم التحقق مع Meta وحفظ الإعداد ✓"); }}
+                  onSubmit={(e) => { e.preventDefault(); saveWithConfirmation(); }}
                   autoComplete="off"
                 >
                   <label style={label}>رقم واتساب الأعمال *</label>
@@ -173,6 +203,26 @@ export default function WhatsappSetupPage() {
         )}
 
         {message && <p style={{ color: message.ok ? "green" : "var(--red)", fontSize: "0.88rem", marginTop: 14 }}>{message.text}</p>}
+
+        <div style={{ marginTop: 22, paddingTop: 14, borderTop: "1px solid var(--fog-dark, #ddd)" }}>
+          <strong style={{ fontSize: "0.92rem" }}>أرشيف المحادثات وسجل الأرقام</strong>
+          <p style={{ fontSize: "0.82rem", color: "var(--steel)", margin: "4px 0 8px" }}>
+            جميع محادثات البوت محفوظة بشكل دائم ولا يمكن تعديلها أو حذفها، حتى لو غيّرت الرقم أو فصلته أو انتهى اشتراك الخدمة. تجدها في قسم «سجل الرسائل» بلوحة الإدارة، وكل رسالة مسجّل معها الرقم الذي جرت عبره.
+          </p>
+          {history.length === 0 ? (
+            <p style={{ fontSize: "0.82rem", color: "var(--steel)" }}>لا توجد تغييرات مسجّلة على الأرقام.</p>
+          ) : (
+            <ul style={{ margin: 0, paddingInlineStart: 18, fontSize: "0.84rem", lineHeight: 1.9 }}>
+              {history.map((h) => (
+                <li key={h.id}>
+                  {new Date(h.created_at).toLocaleString("ar")} — {EVENT_LABEL[h.event]}
+                  {h.from_business_number && <> من <span dir="ltr">{h.from_business_number}</span></>}
+                  {h.to_business_number && <> إلى <span dir="ltr">{h.to_business_number}</span></>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </main>
   );

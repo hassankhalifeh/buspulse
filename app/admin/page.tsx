@@ -86,7 +86,7 @@ studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id"
   waRoutes: { table: "wa_routes", columns: [{ key: "route_name", label: "اسم المسار" }, { key: "school_name", label: "المدرسة" }, { key: "default_bus_ref", label: "الحافلة الافتراضية" }] },
   waStudents: { table: "wa_students", columns: [{ key: "student_name", label: "اسم الطالب" }, { key: "class_level", label: "الصف" }, { key: "station", label: "المحطة" }, { key: "outstanding_debt", label: "الرصيد المستحق" }] },
   waBroadcasts: { table: "wa_broadcasts", columns: [{ key: "broadcast_type", label: "النوع" }, { key: "message_text", label: "النص" }, { key: "recipient_count", label: "عدد المستلمين" }, { key: "sent_at", label: "الوقت" }], orderBy: "sent_at" },
-  waMessages: { table: "wa_message_log", columns: [{ key: "phone_number", label: "الرقم" }, { key: "direction", label: "الاتجاه" }, { key: "message_type", label: "النوع" }, { key: "created_at", label: "الوقت" }], orderBy: "created_at" },
+  waMessages: { table: "wa_message_log", columns: [{ key: "phone_number", label: "الرقم" }, { key: "business_number", label: "رقم البوت" }, { key: "direction", label: "الاتجاه" }, { key: "message_type", label: "النوع" }, { key: "created_at", label: "الوقت" }], orderBy: "created_at" },
   waHolidays: { table: "wa_holidays", columns: [{ key: "holiday_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waExamSchedules: { table: "wa_class_exam_schedules", columns: [{ key: "class_level", label: "الصف" }, { key: "exam_date", label: "التاريخ" }, { key: "description", label: "الوصف" }] },
   waOverrides: { table: "wa_daily_reminder_overrides", columns: [{ key: "scope_type", label: "النطاق" }, { key: "override_date", label: "التاريخ" }, { key: "is_enabled", label: "مفعّل" }], orderBy: "override_date" },
@@ -453,6 +453,12 @@ async function handleEditSubmit(values: Record<string, any>) {
           <p style={{ padding: "0 1.25rem", fontSize: "0.78rem", color: "#8B99A3" }}>
             {waAddonActive === false ? "الخدمة غير مفعّلة لأسطولك (خدمة إضافية)." : "أكمل إعداد الخدمة لتظهر الأقسام."}
           </p>
+        )}
+        {waAddonActive === false && waTenantId && (
+          // The add-on is off, but the conversation archive stays readable: it is a permanent record.
+          <button onClick={() => setSection("waMessages")} className={`nav-item ${section === "waMessages" ? "active" : ""}`}>
+            <History size={17} />سجل الرسائل (أرشيف)
+          </button>
         )}
         {waAddonActive && waTenantId && WA_SECTIONS.map((s) => (
           <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
