@@ -20,6 +20,7 @@ export interface FleetInfo {
   logo_url: string | null;
   notes: string | null;
   onboarding_completed: boolean;
+  login_slug?: string;
 }
 
 // The signed-in owner/admin's own fleet (RLS only ever returns their fleet).

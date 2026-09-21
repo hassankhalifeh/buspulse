@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Phone, Lock } from "lucide-react";
@@ -14,6 +14,11 @@ export default function PhoneLoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "chooseRole" | "pin">("phone");
   const [phone, setPhone] = useState("");
+  const [fleetSlug, setFleetSlug] = useState("");
+
+  useEffect(() => {
+    setFleetSlug(new URLSearchParams(window.location.search).get("f") ?? "");
+  }, []);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [selected, setSelected] = useState<AccountOption | null>(null);
   const [pin, setPin] = useState("");
@@ -26,9 +31,9 @@ export default function PhoneLoginPage() {
     setError("");
     if (!phone.trim()) { setError("أدخل رقم الهاتف."); return; }
     setSubmitting(true);
-    const { data, error: fnError } = await supabase.functions.invoke("phone-login-lookup", { body: { phone: phone.trim() } });
+    const { data, error: fnError } = await supabase.functions.invoke("phone-login-lookup", { body: { phone: phone.trim(), fleet_slug: fleetSlug } });
     setSubmitting(false);
-    if (fnError || !data?.found) { setError("لا يوجد حساب مرتبط بهذا الرقم. تواصل مع إدارة الأسطول."); return; }
+    if (fnError || !data?.found) { setError("تعذّر تسجيل الدخول. تأكد من الرقم والرابط الذي وصلك من إدارة الأسطول، أو تواصل معها."); return; }
 
     if (data.accounts.length === 1) {
       setSelected(data.accounts[0]);

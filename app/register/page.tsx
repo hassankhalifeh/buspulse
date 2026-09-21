@@ -39,7 +39,7 @@ function RegisterInner() {
       if (!data?.found) { setStatus("new"); setAccessToken(null); return; }
       if (data.status === "approved") {
         setStatus("approved");
-        supabase.functions.invoke("phone-login-lookup", { body: { phone: data.phone } }).then(({ data: lookupData }) => {
+        supabase.functions.invoke("phone-login-lookup", { body: { phone: data.phone, access_token: urlToken } }).then(({ data: lookupData }) => {
           if (lookupData?.accounts?.length) {
             setAccountId(lookupData.accounts[0].account_id);
             setNeedsPinSetup(lookupData.accounts[0].needs_setup);
