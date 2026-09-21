@@ -22,6 +22,11 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 import AdminLoginForm from "./components/AdminLoginForm";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Settings, Building2 } from "lucide-react";
+import { useFleetInfo } from "@/lib/useFleetInfo";
+import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
@@ -92,6 +97,23 @@ export default function AdminPage() {
   const { appUser, loading } = useAppUser();
   const fleetId = useCurrentFleetId(appUser);
   const waTenantId = useCurrentWaTenantId(fleetId);
+  const router = useRouter();
+  const { fleet: fleetInfo } = useFleetInfo(appUser);
+  const waAddonActive = useWhatsappAddon(appUser);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+
+  // A brand-new fleet owner must first replace the temporary password and enter the fleet's information.
+  useEffect(() => {
+    if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
+    if (appUser.must_change_password === true || (fleetInfo && fleetInfo.onboarding_completed === false)) {
+      router.replace("/onboarding");
+    }
+  }, [appUser, fleetInfo, router]);
+
+  useEffect(() => {
+    if (!appUser) return;
+    supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true));
+  }, [appUser]);
 
   const [section, setSection] = useState<Section>("buses");
   const [rows, setRows] = useState<Record<string, any>[]>([]);
@@ -421,13 +443,18 @@ async function handleEditSubmit(values: Record<string, any>) {
           </button>
         ))}
 
+        <p className="nav-group-label">الأسطول</p>
+        <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
+        {isPlatformAdmin && <Link href="/platform" className="nav-item"><Building2 size={17} />إدارة المنصة</Link>}
+
         <p className="nav-group-label">بوت الواتساب</p>
-        {waTenantId === null && (
+        <Link href="/admin/whatsapp" className="nav-item"><MessageCircle size={17} />إعداد خدمة الواتساب</Link>
+        {(waAddonActive === false || waTenantId === null) && (
           <p style={{ padding: "0 1.25rem", fontSize: "0.78rem", color: "#8B99A3" }}>
-            غير مفعّل لهذا الأسطول بعد.
+            {waAddonActive === false ? "الخدمة غير مفعّلة لأسطولك (خدمة إضافية)." : "أكمل إعداد الخدمة لتظهر الأقسام."}
           </p>
         )}
-        {waTenantId && WA_SECTIONS.map((s) => (
+        {waAddonActive && waTenantId && WA_SECTIONS.map((s) => (
           <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
             <s.icon size={17} />{s.label}
           </button>

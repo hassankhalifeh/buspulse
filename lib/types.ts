@@ -15,6 +15,7 @@ export interface AppUser {
   driver_id: string | null;
   guardian_id: string | null;
   tenant_id: string | null;
+  must_change_password?: boolean;
 }
 
 export interface Bus {
