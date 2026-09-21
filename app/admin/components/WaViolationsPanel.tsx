@@ -45,12 +45,45 @@ export default function WaViolationsPanel() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ---- temporary mute: settings + who is muted now (one-click lift) ----
+  const [mute, setMute] = useState<{ id: string; mute_threshold: number; mute_days: number } | null>(null);
+  const [muteForm, setMuteForm] = useState({ mute_threshold: 3, mute_days: 7 });
+  const [muted, setMuted] = useState<{ id: string; full_name: string | null; phone_number: string; muted_until: string }[]>([]);
+  const [muteMsg, setMuteMsg] = useState<string | null>(null);
+
+  const loadMute = useCallback(async () => {
+    const { data: t } = await supabase.from("wa_tenants").select("id, mute_threshold, mute_days").limit(1).maybeSingle();
+    if (t) {
+      setMute(t as any);
+      setMuteForm({ mute_threshold: t.mute_threshold, mute_days: t.mute_days });
+    }
+    const { data: c } = await supabase.from("wa_contacts").select("id, full_name, phone_number, muted_until").gt("muted_until", new Date().toISOString()).order("muted_until");
+    setMuted((c as any[]) ?? []);
+  }, []);
+
+  useEffect(() => { loadMute(); }, [loadMute]);
+
+  async function saveMuteSettings() {
+    if (!mute) return;
+    setMuteMsg(null);
+    const { error: err } = await supabase.from("wa_tenants").update(muteForm).eq("id", mute.id);
+    setMuteMsg(err ? "تعذّر حفظ الإعداد (الحد 1–20 والأيام 1–90)." : "تم حفظ إعداد الكتم ✓");
+    if (!err) loadMute();
+  }
+
+  async function unmute(contactId: string) {
+    const { data } = await supabase.rpc("wa_unmute_contact", { p_contact_id: contactId });
+    setMuteMsg(data === true ? "أُلغي الكتم ✓ (يبدأ العدّ من جديد)" : "تعذّر إلغاء الكتم.");
+    loadMute();
+  }
+
   async function review(id: number, status: Violation["review_status"]) {
     const note = window.prompt(status === "confirmed" ? "ملاحظة المراجعة (اختياري) — مثلاً الإجراء المتخذ:" : "سبب التجاهل (اختياري):") ?? undefined;
     if (note === undefined) return; // cancelled
     const { error: err } = await supabase.from("wa_content_violations").update({ review_status: status, review_note: note.trim() || null }).eq("id", id);
     if (err) return setError("تعذّر حفظ قرار المراجعة.");
     load();
+    loadMute(); // a confirmation may have just muted the person
   }
 
   const th: React.CSSProperties = { textAlign: "start", padding: "8px 6px", fontSize: "0.8rem", color: "var(--steel)", borderBottom: "1px solid var(--fog-dark, #ddd)" };
@@ -61,6 +94,38 @@ export default function WaViolationsPanel() {
       <p style={{ fontSize: "0.86rem", color: "var(--steel)", marginTop: 0 }}>
         أي رسالة أو إدخال يحتوي على ألفاظ غير لائقة يُمنع تلقائياً ويُسجَّل هنا بنصه الأصلي. السجل دائم ولا يُعدَّل ولا يُحذف؛ دورك تأكيد المخالفة أو تجاهلها مع ملاحظة تُحفظ باسمك ووقتها.
       </p>
+      <div style={{ padding: 14, borderRadius: 10, background: "var(--fog, #f3f5f7)", marginBottom: 14 }}>
+        <strong style={{ fontSize: "0.9rem" }}>الكتم المؤقت لأولياء الأمور</strong>
+        <p style={{ fontSize: "0.82rem", color: "var(--steel)", margin: "4px 0 8px" }}>
+          لا يُكتم أحد بالاكتشاف الآلي وحده: يبدأ الكتم فقط بعد أن <b>تؤكّد أنت</b> عدداً من المخالفات الواردة من الشخص خلال 30 يوماً، ويتوقف البوت عن التفاعل مع رسائله للمدة المحددة، ثم يعود تلقائياً. لا يشمل السائقين أبداً (تسجيل الرحلة والطوارئ).
+        </p>
+        {mute && (
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <label style={{ fontSize: "0.82rem" }}>عدد المخالفات المؤكَّدة للكتم
+              <input className="input" type="number" min={1} max={20} style={{ display: "block", width: 110, marginTop: 4 }} value={muteForm.mute_threshold} onChange={(e) => setMuteForm({ ...muteForm, mute_threshold: Number(e.target.value) })} />
+            </label>
+            <label style={{ fontSize: "0.82rem" }}>مدة الكتم (أيام)
+              <input className="input" type="number" min={1} max={90} style={{ display: "block", width: 110, marginTop: 4 }} value={muteForm.mute_days} onChange={(e) => setMuteForm({ ...muteForm, mute_days: Number(e.target.value) })} />
+            </label>
+            <button className="btn btn-primary" onClick={saveMuteSettings}>حفظ</button>
+          </div>
+        )}
+        {muteMsg && <p style={{ fontSize: "0.84rem", margin: "8px 0 0" }}>{muteMsg}</p>}
+        <div style={{ marginTop: 10, fontSize: "0.86rem" }}>
+          <strong>المكتومون حالياً ({muted.length})</strong>
+          {muted.length === 0 ? <span style={{ color: "var(--steel)" }}> — لا أحد.</span> : (
+            <ul style={{ margin: "6px 0 0", paddingInlineStart: 0, listStyle: "none" }}>
+              {muted.map((m) => (
+                <li key={m.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "4px 0" }}>
+                  <span>{m.full_name ?? "—"} <span dir="ltr" style={{ color: "var(--steel)" }}>{m.phone_number}</span> — حتى {new Date(m.muted_until).toLocaleDateString("ar")}</span>
+                  <button className="btn btn-secondary" onClick={() => unmute(m.id)}>إلغاء الكتم</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <button className={`btn ${filter === "pending" ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilter("pending")}>بانتظار المراجعة</button>
         <button className={`btn ${filter === "all" ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilter("all")}>الكل</button>
