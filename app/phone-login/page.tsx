@@ -16,8 +16,14 @@ export default function PhoneLoginPage() {
   const [phone, setPhone] = useState("");
   const [fleetSlug, setFleetSlug] = useState("");
 
+  const [fleetName, setFleetName] = useState("");
+
   useEffect(() => {
-    setFleetSlug(new URLSearchParams(window.location.search).get("f") ?? "");
+    const slug = new URLSearchParams(window.location.search).get("f") ?? "";
+    setFleetSlug(slug);
+    if (!slug) return;
+    supabase.functions.invoke("phone-login-lookup", { body: { action: "fleet_name", fleet_slug: slug } })
+      .then(({ data }) => { if (data?.found) setFleetName(data.fleet_name); });
   }, []);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [selected, setSelected] = useState<AccountOption | null>(null);
@@ -73,7 +79,8 @@ export default function PhoneLoginPage() {
   return (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div className="card fade-in" style={{ padding: "2rem", width: 360, maxWidth: "100%" }}>
-        <h2 style={{ marginBottom: 18, color: "var(--navy)" }}>تسجيل الدخول</h2>
+        <h2 style={{ marginBottom: fleetName ? 4 : 18, color: "var(--navy)" }}>تسجيل الدخول</h2>
+        {fleetName && <p style={{ margin: "0 0 18px", color: "var(--steel)", fontSize: "0.95rem", fontWeight: 600 }}>{fleetName}</p>}
 
         {step === "phone" && (
           <form onSubmit={lookupPhone}>
