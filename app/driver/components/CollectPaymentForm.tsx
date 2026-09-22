@@ -6,7 +6,7 @@ import { Wallet, CheckCircle2 } from "lucide-react";
 
 interface StudentOption { student_id: string; full_name: string; contract_id: string; }
 
-export default function CollectPaymentForm({ busId }: { busId: string }) {
+export default function CollectPaymentForm({ busId, driverId }: { busId: string; driverId: string }) {
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [studentId, setStudentId] = useState("");
   const [amount, setAmount] = useState("");
@@ -36,6 +36,7 @@ export default function CollectPaymentForm({ busId }: { busId: string }) {
       payment_method: "Cash",
       payment_status: "Pending",
       payment_date: new Date().toISOString().slice(0, 10),
+      collected_by_driver_id: driverId,
     });
     setSubmitting(false);
     if (err) { setError(err.message); return; }

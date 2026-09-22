@@ -83,7 +83,7 @@ studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id"
   buses: { table: "buses", columns: [{ key: "plate_number", label: "اللوحة" }, { key: "model", label: "الموديل" }, { key: "status", label: "الحالة" }] },
   drivers: { table: "drivers", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "salary_type", label: "نوع الأجر" }, { key: "status", label: "الحالة" }] },
   contracts: { table: "contracts", columns: [{ key: "client_name", label: "العميل" }, { key: "contract_type", label: "نوع العقد" }, { key: "payment_cycle", label: "دورة الدفع" }, { key: "status", label: "الحالة" }] },
-  guardians: { table: "guardians", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "email", label: "البريد الإلكتروني" }] },
+  guardians: { table: "guardians", columns: [{ key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "email", label: "البريد الإلكتروني" }, { key: "address", label: "العنوان" }] },
   students: { table: "students", columns: [{ key: "full_name", label: "اسم الطالب" }, { key: "subscription_type", label: "نوع الاشتراك" }, { key: "bus_id", label: "الحافلة" }, { key: "status", label: "الحالة" }] },
   payments: { table: "payments", columns: [{ key: "student_id", label: "الطالب" }, { key: "amount", label: "المبلغ" }, { key: "payment_method", label: "طريقة الدفع" }, { key: "payment_status", label: "الحالة" }, { key: "payment_date", label: "التاريخ" }], orderBy: "payment_date" },
   announcements: { table: "announcements", columns: [{ key: "title", label: "العنوان" }, { key: "announcement_type", label: "النوع" }, { key: "target_audience", label: "الجمهور المستهدف" }, { key: "created_at", label: "تاريخ النشر" }], orderBy: "created_at" },
@@ -275,6 +275,7 @@ clients: [
       { key: "full_name", label: "الاسم الكامل", type: "text", required: true },
       { key: "phone", label: "الهاتف", type: "text" },
       { key: "email", label: "البريد الإلكتروني", type: "text" },
+      { key: "address", label: "العنوان", type: "text" },
     ],
     students: [
       { key: "student_id", label: "معرّف الطالب", type: "text", disabled: true, placeholder: "سيتم توليده تلقائياً" },
@@ -294,7 +295,7 @@ clients: [
       { key: "contract_id", label: "العقد", type: "select", required: true, options: refContracts },
       { key: "amount", label: "المبلغ", type: "number", required: true },
       { key: "payment_method", label: "طريقة الدفع", type: "select", required: true, options: [{ value: "Cash", label: "كاش" }, { value: "Digital", label: "رقمي" }] },
-      { key: "payment_status", label: "الحالة", type: "select", options: [{ value: "Pending", label: "بانتظار التأكيد" }, { value: "Confirmed", label: "مؤكدة" }] },
+      { key: "payment_status", label: "الحالة", type: "select", options: [{ value: "Pending", label: "بانتظار التسليم للإدارة" }, { value: "Confirmed", label: "تم التسليم والتأكيد" }] },
       { key: "payment_date", label: "التاريخ", type: "date" },
     ],
     announcements: [

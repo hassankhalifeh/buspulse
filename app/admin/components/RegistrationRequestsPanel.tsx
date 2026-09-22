@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface RequestRow {
   id: string;
+  fleet_id: string;
   full_name: string;
   phone: string;
   school_name: string | null;
@@ -40,12 +41,11 @@ export default function RegistrationRequestsPanel() {
     if (status === "approved") {
       const request = requests.find((r) => r.id === id);
       if (request) {
-        // إنشاء ولي أمر حقيقي فوراً
-       const { data: fleetRow } = await supabase.from("fleets").select("fleet_id").limit(1).single();
-const { data: guardian, error: gErr } = await supabase.from("guardians")
-  .insert({ full_name: request.full_name, phone: request.phone, fleet_id: fleetRow?.fleet_id })
-  .select("guardian_id")
-  .single();
+        // إنشاء ولي أمر حقيقي فوراً، بنفس أسطول الطلب (لا نخمّنه من جدول الأساطيل)
+        const { data: guardian, error: gErr } = await supabase.from("guardians")
+          .insert({ full_name: request.full_name, phone: request.phone, address: request.address, fleet_id: request.fleet_id })
+          .select("guardian_id")
+          .single();
         if (gErr) { alert("تمت الموافقة لكن فشل إنشاء ولي الأمر: " + gErr.message); }
         else {
           // توليد QR مباشرة له
