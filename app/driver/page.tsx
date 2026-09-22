@@ -73,7 +73,7 @@ export default function DriverPage() {
       <main className="fade-in" style={{ maxWidth: 480, margin: "0 auto", padding: "1.25rem 1rem" }}>
         {bus && <HandoverForm busId={bus.bus_id} driverId={appUser.driver_id} />}
         {bus && <GpsBroadcaster busId={bus.bus_id} />}
-{bus && <CollectPaymentForm busId={bus.bus_id} />}
+{bus && <CollectPaymentForm busId={bus.bus_id} driverId={appUser.driver_id} />}
       </main>
 
       <SOSButton busId={bus?.bus_id ?? ""} driverId={appUser.driver_id} />
