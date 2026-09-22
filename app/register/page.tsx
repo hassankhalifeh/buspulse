@@ -11,10 +11,13 @@ function RegisterInner() {
   const router = useRouter();
   const params = useSearchParams();
   const urlToken = params.get("t");
+  const fleetSlug = params.get("f");
 
   const [accessToken, setAccessToken] = useState<string | null>(urlToken);
   const [loading, setLoading] = useState(!!urlToken);
-    const [status, setStatus] = useState<"new" | "pending" | "rejected" | "approved" | null>(urlToken ? null : "new");
+    const [status, setStatus] = useState<"new" | "pending" | "rejected" | "approved" | "no_fleet" | null>(
+    urlToken ? null : fleetSlug ? "new" : "no_fleet"
+  );
   const [accountId, setAccountId] = useState<string | null>(null);
   const [needsPinSetup, setNeedsPinSetup] = useState(true);
   const [loginPin, setLoginPin] = useState("");
@@ -29,8 +32,6 @@ function RegisterInner() {
   const [children, setChildren] = useState<ChildRow[]>([{ child_name: "", relation: "Father" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  const FLEET_ID = "9812348a-e836-4438-9bf4-26a801a467f1";
 
   useEffect(() => {
     if (!urlToken) return;
@@ -70,7 +71,7 @@ function RegisterInner() {
     const { data, error: fnError } = await supabase.functions.invoke("registration-submit", {
       body: {
         access_token: accessToken,
-        fleet_id: FLEET_ID,
+        fleet_slug: fleetSlug,
         full_name: fullName, phone, school_name: schoolName, address,
         children: children.filter((c) => c.child_name.trim()),
       },
@@ -102,6 +103,16 @@ function RegisterInner() {
   }
 
   if (loading) return <p style={{ padding: 24 }}>جارٍ التحقق...</p>;
+
+  if (status === "no_fleet") {
+    return (
+      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <p style={{ padding: 24, color: "var(--steel)", textAlign: "center" }}>
+          هذا الرابط غير صالح. اطلب رابط التسجيل من إدارة أسطولك.
+        </p>
+      </main>
+    );
+  }
 
    if (status === "approved") {
     return (

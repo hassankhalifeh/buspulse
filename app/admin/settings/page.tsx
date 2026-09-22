@@ -31,6 +31,15 @@ export default function FleetSettingsPage() {
         <ArrowRight size={15} /> العودة إلى لوحة الإدارة
       </Link>
       {fleet?.login_slug && <FleetLoginLink slug={fleet.login_slug} fleetName={fleet.company_name} />}
+      {fleet?.login_slug && (
+        <FleetLoginLink
+          slug={fleet.login_slug}
+          fleetName={fleet.company_name}
+          path="/register"
+          title="رابط تسجيل ولي أمر جديد"
+          description="وزّع هذا الرابط ليطلب أولياء الأمور الجدد تسجيل حسابهم بأنفسهم. تراجع أنت كل طلب من قسم «طلبات التسجيل» قبل الموافقة."
+        />
+      )}
       <div className="card" style={{ padding: "1.75rem" }}>
         <h1 style={{ fontSize: "1.25rem", color: "var(--navy)", margin: "0 0 4px" }}>إعدادات الأسطول</h1>
         <p style={{ fontSize: "0.88rem", color: "var(--steel)", margin: 0 }}>معلومات أسطولك كما تظهر في النظام.</p>
