@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   BusFront, Users, FileText, UserRound, GraduationCap,
   Wallet, TrendingUp, Megaphone, Plus, MessageCircle, MapPinned,
-  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload,
+  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart,
 } from "lucide-react";
 import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
@@ -24,6 +24,7 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 import WaViolationsPanel from "./components/WaViolationsPanel";
+import ReportsPanel from "./components/ReportsPanel";
 import AdminLoginForm from "./components/AdminLoginForm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,7 +35,7 @@ import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
-  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations";
+  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations" | "reports";
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
@@ -52,6 +53,7 @@ const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck },
   { id: "loginActivity", label: "سجل الدخول", icon: History },
 { id: "registrationRequests", label: "طلبات التسجيل", icon: UserRound },
+  { id: "reports", label: "التقارير", icon: FileBarChart },
 ];
 
 // Only shown once this fleet has actually activated the WhatsApp
@@ -519,6 +521,8 @@ async function handleEditSubmit(values: Record<string, any>) {
   <WaViolationsPanel />
 ) : section === "registrationRequests" ? (
   <RegistrationRequestsPanel />
+) : section === "reports" ? (
+  <ReportsPanel />
 ) : (
           SECTION_QUERY[section] && (
             <SimpleTable
