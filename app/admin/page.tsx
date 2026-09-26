@@ -2,7 +2,7 @@
 
 import LocalQr from "./components/LocalQr";
 import LogoutButton from "@/app/components/LogoutButton";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCurrentFleetId } from "@/lib/useCurrentFleetId";
 import { useCurrentWaTenantId } from "@/lib/useCurrentWaTenantId";
@@ -122,6 +122,9 @@ export default function AdminPage() {
   }, [appUser]);
 
   const [section, setSection] = useState<Section>("buses");
+  // The sidebar and the content scroll independently; choosing another page starts it at the top.
+  const mainRef = useRef<HTMLElement | null>(null);
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [section]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [plRows, setPlRows] = useState<Record<string, any>[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -439,8 +442,8 @@ async function handleEditSubmit(values: Record<string, any>) {
 
 }
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <nav style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto" }}>
+    <div className="admin-shell">
+      <nav className="admin-nav" style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 1.25rem", marginBottom: 18 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <BusFront size={17} color="white" />
@@ -483,7 +486,7 @@ async function handleEditSubmit(values: Record<string, any>) {
         <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
-      <main className="fade-in" style={{ flex: 1, padding: "1.75rem", maxWidth: 1000 }}>
+      <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, padding: "1.75rem", maxWidth: 1000 }}>
         <SosFeed />
         <KpiCards />
 
