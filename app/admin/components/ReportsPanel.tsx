@@ -48,6 +48,7 @@ function PieceTable({ piece, pieceId, onRows }: { piece: Piece; pieceId: string;
   return (
     <>
       {tk.toolbar}
+      <div style={{ overflowX: "auto" }}>
       <table className="data-table">
         <thead><tr>{piece.columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead>
         <tbody>
@@ -55,6 +56,7 @@ function PieceTable({ piece, pieceId, onRows }: { piece: Piece; pieceId: string;
           {tk.rows.length === 0 && <tr><td colSpan={piece.columns.length}>{piece.rows.length === 0 ? "لا توجد بيانات." : "لا توجد نتائج مطابقة."}</td></tr>}
         </tbody>
       </table>
+      </div>
     </>
   );
 }

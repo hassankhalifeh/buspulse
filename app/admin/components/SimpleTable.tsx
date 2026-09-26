@@ -44,7 +44,7 @@ export default function SimpleTable({
           لا توجد نتائج مطابقة. <button type="button" onClick={tk.clear} style={{ background: "none", border: "none", color: "var(--navy)", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit" }}>مسح البحث</button>
         </p>
       ) : (
-        <div className="card fade-in" style={{ overflow: "hidden" }}>
+        <div className="card fade-in" style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead>
               <tr>
