@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
 import { Check, AlertTriangle } from "lucide-react";
 
 interface AppUserRow { id: string; full_name: string; role: string; }
 interface Capability { key: string; label_ar: string; category: string; }
+
+const ROLE_AR: Record<string, string> = { owner: "صاحب الأسطول", admin: "مدير", driver: "سائق", guardian: "ولي أمر", client_viewer: "مشاهد" };
+const PERM_COLUMNS = [
+  { key: "full_name", label: "المستخدم" }, { key: "role_label", label: "الدور" }, { key: "granted_text", label: "الصلاحيات الممنوحة" },
+];
 
 // The literal "warn before granting a conflicting permission" screen —
 // every checkbox writes straight to user_capabilities, and toggling
@@ -79,12 +85,24 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
     }
   }
 
+  // Search/filter plug-in (lib/tablekit): by name, role, or a granted permission's name.
+  const view = useMemo(() => users.map((u) => ({
+    ...u,
+    role_label: ROLE_AR[u.role] ?? u.role,
+    granted_text: ["owner", "admin"].includes(u.role)
+      ? "كل الصلاحيات"
+      : capabilities.filter((c) => grants[u.id]?.has(c.key)).map((c) => c.label_ar).join("، "),
+  })), [users, capabilities, grants]);
+  const tk = useTableKit(view, PERM_COLUMNS);
+
   if (users.length === 0) return <p style={{ color: "var(--steel)" }}>لا يوجد مستخدمون بعد.</p>;
 
   const categories = Array.from(new Set(capabilities.map((c) => c.category)));
 
   return (
     <div>
+      {tk.toolbar}
+      {tk.rows.length === 0 && <p style={{ color: "var(--steel)" }}>لا توجد نتائج مطابقة.</p>}
       <div className="card fade-in" style={{ overflowX: "auto", padding: "0.5rem" }}>
         <table className="data-table">
           <thead>
@@ -98,7 +116,7 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {tk.rows.map((u) => (
               <tr key={u.id}>
                 <td style={{ fontWeight: 700 }}>
                   {u.full_name}<br /><span style={{ fontSize: "0.75rem", color: "var(--steel)" }}>{u.role}</span>
