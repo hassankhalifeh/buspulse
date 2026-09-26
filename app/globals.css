@@ -116,11 +116,33 @@ h1, h2, h3 { font-family: var(--font-display); }
    never moves the other and the sidebar stays in place while you read a long page. */
 .admin-shell { position: fixed; inset: 0; display: flex; overflow: hidden; } /* fixed: fills the window regardless of the default body margin, so the page itself never scrolls */
 .admin-nav { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-.admin-main { height: 100%; overflow-y: auto; min-width: 0; }
+.admin-main { height: 100%; overflow-y: auto; min-width: 0; padding: 1.75rem; }
+.admin-topbar, .admin-backdrop { display: none; }
+
+/* Phone / small tablet: the sidebar becomes a drawer opened from a top bar; the content uses the full width. */
+@media (max-width: 768px) {
+  .admin-shell { flex-direction: column; }
+  .admin-topbar {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 10px 14px;
+    background: var(--navy); color: white; position: relative; z-index: 40;
+  }
+  .admin-menu-btn { background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 8px; padding: 7px; display: inline-flex; cursor: pointer; }
+  .admin-main { flex: 1; height: auto; min-height: 0; padding: 1rem; max-width: none !important; }
+  .admin-nav {
+    position: fixed; top: 0; bottom: 0; inset-inline-start: 0; z-index: 60; height: auto;
+    width: min(82vw, 300px) !important;
+    transform: translateX(100%); visibility: hidden; transition: transform 0.22s ease, visibility 0.22s;
+  }
+  .admin-nav.open { transform: none; visibility: visible; }
+  .admin-backdrop { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(27,42,56,0.5); }
+  .data-table { min-width: 520px; }
+}
 
 @media print {
   .admin-shell { position: static !important; }
   .admin-shell, .admin-main { height: auto !important; overflow: visible !important; display: block !important; }
+  .admin-topbar, .admin-backdrop { display: none !important; }
+  .admin-main { padding: 0 !important; }
   .no-print { display: none !important; }
   body.printing-report * { visibility: hidden; }
   body.printing-report .report-print-area, body.printing-report .report-print-area * { visibility: visible; }

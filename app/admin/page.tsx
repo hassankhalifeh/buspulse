@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   BusFront, Users, FileText, UserRound, GraduationCap,
   Wallet, TrendingUp, Megaphone, Plus, MessageCircle, MapPinned,
-  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart,
+  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X,
 } from "lucide-react";
 import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
@@ -124,6 +124,7 @@ export default function AdminPage() {
   const [section, setSection] = useState<Section>("buses");
   // The sidebar and the content scroll independently; choosing another page starts it at the top.
   const mainRef = useRef<HTMLElement | null>(null);
+  const [navOpen, setNavOpen] = useState(false); // phone only: the sidebar is a drawer
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [section]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [plRows, setPlRows] = useState<Record<string, any>[]>([]);
@@ -443,7 +444,21 @@ async function handleEditSubmit(values: Record<string, any>) {
 }
   return (
     <div className="admin-shell">
-      <nav className="admin-nav" style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0 }}>
+      {/* Phone only (hidden on wide screens by CSS): top bar with the menu button */}
+      <header className="admin-topbar">
+        <button type="button" className="admin-menu-btn" onClick={() => setNavOpen((o) => !o)} aria-label="القائمة" aria-expanded={navOpen}>
+          {navOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <strong style={{ fontSize: "1.02rem" }}>
+          {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label ?? "Buspulse"}
+        </strong>
+      </header>
+      {navOpen && <div className="admin-backdrop" onClick={() => setNavOpen(false)} />}
+      <nav
+        className={`admin-nav${navOpen ? " open" : ""}`}
+        style={{ width: 235, background: "var(--navy)", padding: "1.5rem 0", flexShrink: 0 }}
+        onClick={(e) => { if ((e.target as HTMLElement).closest("button, a")) setNavOpen(false); }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 1.25rem", marginBottom: 18 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <BusFront size={17} color="white" />
@@ -486,16 +501,16 @@ async function handleEditSubmit(values: Record<string, any>) {
         <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
-      <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, padding: "1.75rem", maxWidth: 1000 }}>
+      <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, maxWidth: 1000 }}>
         <SosFeed />
         <KpiCards />
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
           <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)" }}>
             {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label}
           </h2>
 {fields && (
-  <div style={{ display: "flex", gap: 8 }}>
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
     <button onClick={() => setShowAddModal(true)} className="btn btn-primary"><Plus size={16} /> إضافة جديد</button>
     {!section.startsWith("wa") && section !== "pl" && section !== "permissions" && (
       <button onClick={() => setShowImportModal(true)} className="btn btn-secondary"><Upload size={16} /> استيراد Excel</button>
