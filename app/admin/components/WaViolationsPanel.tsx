@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Violation {
   id: number;
@@ -27,12 +28,29 @@ const STATUS: Record<Violation["review_status"], { text: string; color: string }
   dismissed: { text: "لا مخالفة (تجاهل)", color: "var(--steel)" },
 };
 
+const VIOLATION_COLUMNS = [
+  { key: "time", label: "الوقت" }, { key: "phone", label: "الرقم" }, { key: "type", label: "النوع" },
+  { key: "content", label: "المحتوى" }, { key: "action", label: "الإجراء" }, { key: "review", label: "المراجعة" },
+];
+function violationText(v: Violation, key: string): string {
+  switch (key) {
+    case "time": return new Date(v.created_at).toLocaleString("ar");
+    case "phone": return v.phone_number ?? "";
+    case "type": return `${DIRECTION[v.direction]} ${v.context}`;
+    case "content": return `${v.content} ${v.matched_terms.join(" ")}`;
+    case "action": return ACTION[v.action_taken];
+    case "review": return `${STATUS[v.review_status].text} ${v.review_note ?? ""}`;
+    default: return "";
+  }
+}
+
 // Every indecent message or entry the system blocked. The record itself can never be edited or deleted;
 // the fleet's owner/admin only adds a review decision and note (kept with their identity and time).
 export default function WaViolationsPanel() {
   const [rows, setRows] = useState<Violation[]>([]);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [error, setError] = useState<string | null>(null);
+  const tk = useTableKit(rows, VIOLATION_COLUMNS, { getText: violationText });
 
   const load = useCallback(async () => {
     let query = supabase.from("wa_content_violations").select("*").order("created_at", { ascending: false }).limit(200);
@@ -131,13 +149,14 @@ export default function WaViolationsPanel() {
         <button className={`btn ${filter === "all" ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilter("all")}>الكل</button>
       </div>
       {error && <p style={{ color: "var(--red)", fontSize: "0.86rem" }}>{error}</p>}
+      {tk.toolbar}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr><th style={th}>الوقت</th><th style={th}>الرقم</th><th style={th}>النوع</th><th style={th}>المحتوى</th><th style={th}>الإجراء</th><th style={th}>المراجعة</th></tr>
           </thead>
           <tbody>
-            {rows.map((v) => (
+            {tk.rows.map((v) => (
               <tr key={v.id}>
                 <td style={td}>{new Date(v.created_at).toLocaleString("ar")}</td>
                 <td style={td} dir="ltr">{v.phone_number ?? "—"}</td>
@@ -157,7 +176,7 @@ export default function WaViolationsPanel() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td style={td} colSpan={6}>لا توجد مخالفات {filter === "pending" ? "بانتظار المراجعة" : "مسجّلة"}. 👍</td></tr>}
+            {tk.rows.length === 0 && <tr><td style={td} colSpan={6}>لا توجد مخالفات {filter === "pending" ? "بانتظار المراجعة" : "مسجّلة"}. 👍</td></tr>}
           </tbody>
         </table>
       </div>

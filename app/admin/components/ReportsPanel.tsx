@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabaseClient";
 import { useAppUser } from "@/lib/useAppUser";
+import { useTableKit } from "@/lib/tablekit";
 import { FileSpreadsheet, Printer, CheckCircle2 } from "lucide-react";
 
 type Row = Record<string, string | number | null>;
@@ -39,6 +40,25 @@ const BLOCKS: BlockDef[] = [
   { key: "handoverLog", label: "سجل استلام الحافلات", category: "السجلات" },
 ];
 
+// One report table with the search/filter plug-in. The rows that remain after filtering are
+// reported upward so "تصدير Excel" exports what is on screen (print already follows the DOM).
+function PieceTable({ piece, pieceId, onRows }: { piece: Piece; pieceId: string; onRows: (id: string, rows: Row[]) => void }) {
+  const tk = useTableKit(piece.rows, piece.columns);
+  useEffect(() => { onRows(pieceId, tk.rows); }, [tk.rows, pieceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <>
+      {tk.toolbar}
+      <table className="data-table">
+        <thead><tr>{piece.columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead>
+        <tbody>
+          {tk.rows.map((r, ri) => <tr key={ri}>{piece.columns.map((c) => <td key={c.key}>{r[c.key] ?? "—"}</td>)}</tr>)}
+          {tk.rows.length === 0 && <tr><td colSpan={piece.columns.length}>{piece.rows.length === 0 ? "لا توجد بيانات." : "لا توجد نتائج مطابقة."}</td></tr>}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 function sheetName(s: string) {
   return s.replace(/[\\/*?:[\]]/g, " ").slice(0, 31) || "sheet";
 }
@@ -58,6 +78,7 @@ export default function ReportsPanel() {
   const [blocks, setBlocks] = useState<{ key: string; label: string; pieces: Piece[] }[]>([]);
   const [pendingPayments, setPendingPayments] = useState<{ id: string; student: string; driver: string; amount: number }[]>([]);
   const [confirmBusy, setConfirmBusy] = useState<string | null>(null);
+  const filteredRows = useRef<Record<string, Row[]>>({});
 
   useEffect(() => {
     supabase.from("routes").select("route_id, route_name, buses(plate_number)").order("route_name").then(({ data }) => {
@@ -309,9 +330,10 @@ export default function ReportsPanel() {
   function exportExcel() {
     const wb = XLSX.utils.book_new();
     let n = 0;
-    blocks.forEach((b) => b.pieces.forEach((p) => {
+    blocks.forEach((b, bi) => b.pieces.forEach((p, pi) => {
       if (p.columns.length === 0) return;
-      const sheet = XLSX.utils.json_to_sheet(p.rows.map((r) => Object.fromEntries(p.columns.map((c) => [c.label, r[c.key] ?? ""]))));
+      const shown = filteredRows.current[`${bi}-${pi}`] ?? p.rows; // what the search/filter left on screen
+      const sheet = XLSX.utils.json_to_sheet(shown.map((r) => Object.fromEntries(p.columns.map((c) => [c.label, r[c.key] ?? ""]))));
       XLSX.utils.book_append_sheet(wb, sheet, sheetName(`${++n}-${p.heading}`));
     }));
     XLSX.writeFile(wb, "تقرير.xlsx");
@@ -397,13 +419,7 @@ export default function ReportsPanel() {
                   {p.columns.length === 0 ? (
                     <p style={{ color: "var(--steel)" }}>اختر معياراً صالحاً أعلاه.</p>
                   ) : (
-                    <table className="data-table">
-                      <thead><tr>{p.columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead>
-                      <tbody>
-                        {p.rows.map((r, ri) => <tr key={ri}>{p.columns.map((c) => <td key={c.key}>{r[c.key] ?? "—"}</td>)}</tr>)}
-                        {p.rows.length === 0 && <tr><td colSpan={p.columns.length}>لا توجد بيانات.</td></tr>}
-                      </tbody>
-                    </table>
+                    <PieceTable piece={p} pieceId={`${bi}-${pi}`} onRows={(id, rows) => { filteredRows.current[id] = rows; }} />
                   )}
                 </div>
               ))}

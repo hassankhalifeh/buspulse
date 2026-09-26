@@ -113,6 +113,7 @@ h1, h2, h3 { font-family: var(--font-display); }
    before window.print(), and removed right after. Everything except the report itself is
    hidden, and the report is pulled out of the sidebar layout to use the full printable page. */
 @media print {
+  .no-print { display: none !important; }
   body.printing-report * { visibility: hidden; }
   body.printing-report .report-print-area, body.printing-report .report-print-area * { visibility: visible; }
   body.printing-report .report-print-area { position: absolute; inset: 0; padding: 24px; }
