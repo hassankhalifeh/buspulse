@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
 import type { WaDriverExpense } from "@/lib/types";
 import { ImageIcon, Check, X } from "lucide-react";
@@ -8,9 +9,18 @@ import { ImageIcon, Check, X } from "lucide-react";
 interface RowWithName extends WaDriverExpense { driver_name?: string; }
 interface CashOwedRow { driver_contact_id: string; total_collected: number; approved_expenses: number; net_cash_owed: number; wa_contacts?: { full_name: string }; }
 
+const EXPENSE_COLUMNS = [
+  { key: "driver_name", label: "السائق" }, { key: "category", label: "النوع" },
+  { key: "expense_date", label: "التاريخ" }, { key: "amount", label: "المبلغ" },
+];
+
 export default function WaExpensesPanel({ waTenantId }: { waTenantId: string }) {
   const [expenses, setExpenses] = useState<RowWithName[]>([]);
   const [cashOwed, setCashOwed] = useState<CashOwedRow[]>([]);
+
+  // Search/filter plug-in (lib/tablekit) over the expenses waiting for review.
+  const pending = useMemo(() => expenses.filter((e) => e.status === "Pending"), [expenses]);
+  const tk = useTableKit(pending, EXPENSE_COLUMNS);
 
   function load() {
     supabase
@@ -58,10 +68,11 @@ export default function WaExpensesPanel({ waTenantId }: { waTenantId: string }) 
       )}
 
       <h3 style={{ fontSize: "1.05rem", marginBottom: 10 }}>مصاريف بانتظار المراجعة</h3>
-      {expenses.filter((e) => e.status === "Pending").length === 0 && (
-        <p style={{ color: "var(--steel)", marginBottom: 20 }}>لا توجد مصاريف بانتظار المراجعة.</p>
+      {tk.toolbar}
+      {tk.rows.length === 0 && (
+        <p style={{ color: "var(--steel)", marginBottom: 20 }}>{pending.length === 0 ? "لا توجد مصاريف بانتظار المراجعة." : "لا توجد نتائج مطابقة."}</p>
       )}
-      {expenses.filter((e) => e.status === "Pending").map((e) => (
+      {tk.rows.map((e) => (
         <div key={e.id} className="card" style={{ padding: "1rem 1.2rem", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
             <p style={{ margin: 0, fontWeight: 700 }}>{e.driver_name ?? "سائق"} — {e.category ?? "مصروف"}</p>
