@@ -42,7 +42,8 @@ export default function OnboardingPage() {
 
   if (loading || fleetLoading) return shell(<p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p>);
 
-  if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin") || !fleet) {
+  const isAssistant = appUser?.role === "assistant";
+  if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin" && !isAssistant) || (!isAssistant && !fleet)) {
     return shell(
       <>
         <p style={{ color: "var(--steel)", marginBottom: 14 }}>سجّل الدخول بحساب إدارة الأسطول أولاً.</p>
@@ -68,6 +69,7 @@ export default function OnboardingPage() {
     await supabase.from("app_users").update({ must_change_password: false }).eq("id", appUser!.id);
     setSaving(false);
     setPasswordDone(true);
+    if (isAssistant) router.push("/admin"); // staff have no fleet details to fill in
   }
 
   if (needsPassword) {
@@ -88,13 +90,17 @@ export default function OnboardingPage() {
     );
   }
 
+  if (isAssistant) {
+    return shell(<Link href="/admin" className="btn btn-primary" style={{ display: "block", textAlign: "center", marginTop: 14 }}>متابعة إلى لوحة الإدارة</Link>);
+  }
+
   return shell(
     <>
       <p style={{ fontSize: "0.9rem", color: "var(--steel)", margin: "6px 0 4px" }}>
         {appUser.must_change_password === false && !passwordDone ? "" : "الخطوة 2 من 2: "}أدخل معلومات أسطولك. يمكنك تعديلها لاحقاً من «إعدادات الأسطول».
       </p>
       <FleetInfoForm
-        fleet={fleet}
+        fleet={fleet!}
         submitLabel="حفظ وبدء العمل"
         markCompleted
         onSaved={async () => {

@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
-import { Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, UserPlus, KeyRound, Trash2, Copy } from "lucide-react";
 
 interface AppUserRow { id: string; full_name: string; role: string; }
 interface Capability { key: string; label_ar: string; category: string; }
 
-const ROLE_AR: Record<string, string> = { owner: "صاحب الأسطول", admin: "مدير", driver: "سائق", guardian: "ولي أمر", client_viewer: "مشاهد" };
+const ROLE_AR: Record<string, string> = { owner: "صاحب الأسطول", admin: "مدير", assistant: "موظف", driver: "سائق", guardian: "ولي أمر", client_viewer: "مشاهد" };
 const PERM_COLUMNS = [
   { key: "full_name", label: "المستخدم" }, { key: "role_label", label: "الدور" }, { key: "granted_text", label: "الصلاحيات الممنوحة" },
 ];
@@ -22,6 +22,13 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
   const [users, setUsers] = useState<AppUserRow[]>([]);
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [grants, setGrants] = useState<Record<string, Set<string>>>({});
+  // Staff accounts (created here, limited by the ticks below)
+  const [showAdd, setShowAdd] = useState(false);
+  const [staffLogin, setStaffLogin] = useState("");
+  const [staffName, setStaffName] = useState("");
+  const [staffBusy, setStaffBusy] = useState(false);
+  const [staffMsg, setStaffMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ who: string; login?: string; password: string; warning?: string | null } | null>(null);
   const [pendingWarning, setPendingWarning] = useState<{ userId: string; capKey: string; messages: string[] } | null>(null);
 
   async function load() {
@@ -49,6 +56,39 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
   }
 
   useEffect(() => { load(); }, [tenantId]);
+
+  async function callStaff(body: Record<string, unknown>) {
+    const { data, error } = await supabase.functions.invoke("fleet-staff", { body });
+    if (error) return { error: "تعذّر الاتصال بالخادم." } as any;
+    return data as any;
+  }
+
+  async function createStaff(e: React.FormEvent) {
+    e.preventDefault();
+    setStaffMsg(null);
+    setStaffBusy(true);
+    const data = await callStaff({ action: "create_assistant", login: staffLogin, full_name: staffName });
+    setStaffBusy(false);
+    if (data?.error) return setStaffMsg({ ok: false, text: data.error });
+    setCredentials({ who: staffName, login: data.login, password: data.temp_password, warning: data.warning });
+    setStaffLogin(""); setStaffName(""); setShowAdd(false);
+    load();
+  }
+
+  async function resetStaffPassword(u: AppUserRow) {
+    if (!window.confirm(`إعادة تعيين كلمة مرور «${u.full_name}»؟ ستُنشأ كلمة مؤقتة جديدة وتُلغى القديمة.`)) return;
+    const data = await callStaff({ action: "reset_password", app_user_id: u.id });
+    if (data?.error) return setStaffMsg({ ok: false, text: data.error });
+    setCredentials({ who: u.full_name, password: data.temp_password });
+  }
+
+  async function removeStaff(u: AppUserRow) {
+    if (!window.confirm(`إزالة الموظف «${u.full_name}»؟ يُحذف حسابه وصلاحياته ولا يمكنه الدخول بعدها.`)) return;
+    const data = await callStaff({ action: "remove_assistant", app_user_id: u.id });
+    if (data?.error) return setStaffMsg({ ok: false, text: data.error });
+    setStaffMsg({ ok: true, text: data.note ?? "أُزيل الموظف." });
+    load();
+  }
 
   async function applyGrant(userId: string, capKey: string) {
     await supabase.from("user_capabilities").upsert(
@@ -101,6 +141,35 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
 
   return (
     <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+        <p style={{ margin: 0, fontSize: "0.86rem", color: "var(--steel)", maxWidth: 560 }}>
+          الموظفون حسابات تنشئها هنا، وتحدّد بالخانات أدناه ما يستطيع كل موظف فتحه فقط. صاحب الأسطول والمدير يملكان كل شيء تلقائياً.
+        </p>
+        <button className="btn btn-primary" onClick={() => { setShowAdd(true); setStaffMsg(null); }}><UserPlus size={16} /> إضافة موظف</button>
+      </div>
+      {staffMsg && <p style={{ color: staffMsg.ok ? "green" : "var(--red)", fontSize: "0.88rem", marginBottom: 10 }}>{staffMsg.text}</p>}
+      {!users.some((u) => u.role === "assistant") && (
+        <p style={{ color: "var(--steel)", fontSize: "0.86rem", marginBottom: 10 }}>لا يوجد موظفون بعد. اضغط «إضافة موظف» لإنشاء أول حساب، ثم تظهر خاناته هنا لتمنحه الصلاحيات.</p>
+      )}
+      {credentials && (
+        <div style={{ marginBottom: 14, padding: 14, borderRadius: 10, background: "#EAF7EE" }}>
+          <strong>سلّم هذه البيانات لـ «{credentials.who}» (لن تظهر مرة أخرى):</strong>
+          {credentials.login && (
+            <>
+              <p style={{ margin: "8px 0 2px", fontSize: "0.86rem" }}>اسم المستخدم:</p>
+              <div dir="ltr" style={{ fontFamily: "monospace", background: "white", padding: "6px 10px", borderRadius: 8, textAlign: "left" }}>{credentials.login}</div>
+            </>
+          )}
+          <p style={{ margin: "8px 0 2px", fontSize: "0.86rem" }}>كلمة المرور المؤقتة:</p>
+          <div dir="ltr" style={{ fontFamily: "monospace", background: "white", padding: "6px 10px", borderRadius: 8, textAlign: "left" }}>{credentials.password}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText((credentials.login ? "اسم المستخدم: " + credentials.login + "\n" : "") + "كلمة المرور المؤقتة: " + credentials.password)}><Copy size={14} /> نسخ</button>
+            <button className="btn btn-secondary" onClick={() => setCredentials(null)}>تم</button>
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: "0.8rem", color: "#555" }}>يُطلب منه تغيير كلمة المرور عند أول دخول، ثم يفتح /admin ويرى الصفحات المسموحة له فقط.</p>
+          {credentials.warning && <p style={{ marginTop: 8, color: "#8A5A00", fontSize: "0.82rem" }}>⚠️ {credentials.warning}</p>}
+        </div>
+      )}
       {tk.toolbar}
       {tk.rows.length === 0 && <p style={{ color: "var(--steel)" }}>لا توجد نتائج مطابقة.</p>}
       <div className="card fade-in" style={{ overflowX: "auto", padding: "0.5rem" }}>
@@ -119,7 +188,13 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
             {tk.rows.map((u) => (
               <tr key={u.id}>
                 <td style={{ fontWeight: 700 }}>
-                  {u.full_name}<br /><span style={{ fontSize: "0.75rem", color: "var(--steel)" }}>{u.role}</span>
+                  {u.full_name}<br /><span style={{ fontSize: "0.75rem", color: "var(--steel)" }}>{ROLE_AR[u.role] ?? u.role}</span>
+                  {u.role === "assistant" && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      <button onClick={() => resetStaffPassword(u)} title="إعادة تعيين كلمة المرور" style={{ background: "none", border: "1px solid var(--fog-dark)", borderRadius: 6, padding: "3px 6px", cursor: "pointer" }}><KeyRound size={13} /></button>
+                      <button onClick={() => removeStaff(u)} title="إزالة الموظف" style={{ background: "none", border: "1px solid var(--fog-dark)", borderRadius: 6, padding: "3px 6px", cursor: "pointer", color: "var(--red)" }}><Trash2 size={13} /></button>
+                    </div>
+                  )}
                 </td>
                 {capabilities.map((c) => {
                   const granted = grants[u.id]?.has(c.key) ?? false;
@@ -145,6 +220,24 @@ export default function PermissionsMatrix({ tenantId }: { tenantId: string }) {
           </tbody>
         </table>
       </div>
+
+      {showAdd && (
+        <div onClick={() => setShowAdd(false)} className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
+          <form onClick={(e) => e.stopPropagation()} onSubmit={createStaff} className="card" style={{ padding: "1.5rem", width: 420, maxWidth: "100%" }}>
+            <h3 style={{ marginTop: 0, fontSize: "1.05rem", color: "var(--navy)" }}>إضافة موظف</h3>
+            <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>اسم الموظف *</label>
+            <input className="input" required value={staffName} onChange={(e) => setStaffName(e.target.value)} style={{ margin: "6px 0 12px" }} />
+            <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>اسم المستخدم أو البريد الإلكتروني *</label>
+            <input className="input" dir="ltr" required value={staffLogin} onChange={(e) => setStaffLogin(e.target.value)} placeholder="ali.office  أو  ali@company.com" style={{ margin: "6px 0 6px" }} />
+            <p style={{ fontSize: "0.78rem", color: "var(--steel)", margin: "0 0 12px" }}>يُفضَّل البريد الإلكتروني الحقيقي لأنه تُستعاد به كلمة المرور. تُنشأ كلمة مرور مؤقتة تظهر لك مرة واحدة.</p>
+            {staffMsg && !staffMsg.ok && <p style={{ color: "var(--red)", fontSize: "0.85rem", marginBottom: 10 }}>{staffMsg.text}</p>}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button type="submit" disabled={staffBusy} className="btn btn-primary" style={{ flex: 1 }}>{staffBusy ? "جارٍ الإنشاء..." : "إنشاء الحساب"}</button>
+              <button type="button" onClick={() => setShowAdd(false)} className="btn btn-secondary">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {pendingWarning && (
         <div onClick={() => setPendingWarning(null)} className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(27,42,56,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
