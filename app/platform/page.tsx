@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Building2, KeyRound } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useTableKit } from "@/lib/tablekit";
 
 interface FleetRow {
   tenant_id: string;
@@ -43,6 +44,34 @@ const REVIEW_LABEL: Record<ViolationRow["review_status"], string> = { pending: "
 const STATUS_LABEL: Record<string, string> = { trial: "تجريبي", active: "نشط", inactive: "موقوف" };
 const WA_LABEL: Record<string, string> = { not_configured: "غير مُعدّ", connected: "متصل", error: "خطأ", legacy_env: "إعداد الخادم" };
 
+const FLEET_COLUMNS = [
+  { key: "name", label: "الأسطول" }, { key: "login", label: "الدخول" }, { key: "status", label: "الحالة" }, { key: "wa", label: "خدمة الواتساب" },
+];
+function fleetText(f: FleetRow, key: string): string {
+  switch (key) {
+    case "name": return f.company_name || f.display_name;
+    case "login": return f.logins.map((l) => l.login).join(" ");
+    case "status": return STATUS_LABEL[f.subscription_status] ?? f.subscription_status;
+    case "wa": return f.whatsapp_module_enabled ? `مفعّلة ${WA_LABEL[f.whatsapp_connection_status] ?? ""}` : "غير مفعّلة";
+    default: return "";
+  }
+}
+const VIOLATION_COLS = [
+  { key: "time", label: "الوقت" }, { key: "fleet", label: "الأسطول" }, { key: "person", label: "الشخص" },
+  { key: "type", label: "النوع" }, { key: "content", label: "المحتوى" }, { key: "review", label: "المراجعة" },
+];
+function violationText(v: ViolationRow, key: string): string {
+  switch (key) {
+    case "time": return new Date(v.created_at).toLocaleString("ar");
+    case "fleet": return v.fleet ?? "";
+    case "person": return `${v.contact?.full_name ?? ""} ${v.phone_number ?? ""}`;
+    case "type": return `${DIRECTION_LABEL[v.direction]} ${v.context}`;
+    case "content": return `${v.content} ${v.matched_terms.join(" ")}`;
+    case "review": return `${REVIEW_LABEL[v.review_status]} ${v.review_note ?? ""}`;
+    default: return "";
+  }
+}
+
 // Platform administration (visible only to platform admins): create fleet owners and manage each fleet's add-ons.
 export default function PlatformPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -62,6 +91,8 @@ export default function PlatformPage() {
 
   const [violations, setViolations] = useState<ViolationRow[]>([]);
   const [violationFilter, setViolationFilter] = useState<"pending" | "all">("pending");
+  const fleetsTk = useTableKit(fleets, FLEET_COLUMNS, { getText: fleetText });
+  const violationsTk = useTableKit(violations, VIOLATION_COLS, { getText: violationText });
 
   const loadViolations = useCallback(async () => {
     const data = await call({ action: "list_violations", status: violationFilter });
@@ -166,6 +197,7 @@ export default function PlatformPage() {
 
       <div className="card" style={{ padding: "1.5rem" }}>
         <h2 style={{ fontSize: "1.1rem", color: "var(--navy)", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}><Building2 size={18} /> الأساطيل ({fleets.length})</h2>
+        {fleetsTk.toolbar}
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -174,7 +206,7 @@ export default function PlatformPage() {
               </tr>
             </thead>
             <tbody>
-              {fleets.map((f) => (
+              {fleetsTk.rows.map((f) => (
                 <tr key={f.tenant_id}>
                   <td style={td}>
                     <strong>{f.company_name || f.display_name}</strong>
@@ -220,7 +252,7 @@ export default function PlatformPage() {
                   </td>
                 </tr>
               ))}
-              {fleets.length === 0 && <tr><td style={td} colSpan={6}>لا توجد أساطيل.</td></tr>}
+              {fleetsTk.rows.length === 0 && <tr><td style={td} colSpan={6}>{fleets.length === 0 ? "لا توجد أساطيل." : "لا توجد نتائج مطابقة."}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -235,11 +267,12 @@ export default function PlatformPage() {
           <button className={`btn ${violationFilter === "pending" ? "btn-primary" : "btn-secondary"}`} onClick={() => setViolationFilter("pending")}>بانتظار المراجعة</button>
           <button className={`btn ${violationFilter === "all" ? "btn-primary" : "btn-secondary"}`} onClick={() => setViolationFilter("all")}>الكل</button>
         </div>
+        {violationsTk.toolbar}
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr><th style={th}>الوقت</th><th style={th}>الأسطول</th><th style={th}>الشخص</th><th style={th}>النوع</th><th style={th}>المحتوى</th><th style={th}>المراجعة</th></tr></thead>
             <tbody>
-              {violations.map((v) => (
+              {violationsTk.rows.map((v) => (
                 <tr key={v.id}>
                   <td style={td}>{new Date(v.created_at).toLocaleString("ar")}</td>
                   <td style={td}>{v.fleet ?? "—"}</td>
@@ -258,7 +291,7 @@ export default function PlatformPage() {
                   </td>
                 </tr>
               ))}
-              {violations.length === 0 && <tr><td style={td} colSpan={6}>لا توجد مخالفات {violationFilter === "pending" ? "بانتظار المراجعة" : "مسجّلة"}. 👍</td></tr>}
+              {violationsTk.rows.length === 0 && <tr><td style={td} colSpan={6}>لا توجد مخالفات {violationFilter === "pending" ? "بانتظار المراجعة" : "مسجّلة"}. 👍</td></tr>}
             </tbody>
           </table>
         </div>
