@@ -4,7 +4,7 @@
 // (buspulse-whatsapp/01_whatsapp_module_schema.sql +
 // 02_integration_adapter.sql). Keep in sync if the schema changes.
 
-export type AppRole = "owner" | "admin" | "driver" | "guardian" | "client_viewer";
+export type AppRole = "owner" | "admin" | "assistant" | "driver" | "guardian" | "client_viewer";
 
 export interface AppUser {
   id: string;

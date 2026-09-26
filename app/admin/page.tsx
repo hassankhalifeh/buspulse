@@ -30,12 +30,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Settings, Building2 } from "lucide-react";
 import { useFleetInfo } from "@/lib/useFleetInfo";
+import { useStaffCaps } from "@/lib/useStaffCaps";
 import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations" | "reports";
+
+// What a staff member ("assistant") needs to open each page; pages not listed are for owner/admin only.
+const SECTION_CAP: Partial<Record<Section, string>> = {
+  buses: "fleet.manage_buses", routes: "fleet.manage_buses", routeStops: "fleet.manage_buses",
+  studentRouteStops: "fleet.manage_students", guardians: "fleet.manage_students", students: "fleet.manage_students",
+  registrationRequests: "fleet.manage_students", drivers: "fleet.manage_drivers",
+  clients: "fleet.manage_contracts", contracts: "fleet.manage_contracts",
+  payments: "fleet.approve_payments", pl: "fleet.view_reports", reports: "fleet.view_reports",
+  announcements: "fleet.manage_announcements",
+};
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
   { id: "buses", label: "الحافلات", icon: BusFront },
@@ -106,12 +117,13 @@ export default function AdminPage() {
   const router = useRouter();
   const { fleet: fleetInfo } = useFleetInfo(appUser);
   const waAddonActive = useWhatsappAddon(appUser);
+  const access = useStaffCaps(appUser);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   // A brand-new fleet owner must first replace the temporary password and enter the fleet's information.
   useEffect(() => {
-    if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
-    if (appUser.must_change_password === true || (fleetInfo && fleetInfo.onboarding_completed === false)) {
+    if (!appUser || !access.isStaff) return;
+    if (appUser.must_change_password === true || (access.isManager && fleetInfo && fleetInfo.onboarding_completed === false)) {
       router.replace("/onboarding");
     }
   }, [appUser, fleetInfo, router]);
@@ -126,6 +138,13 @@ export default function AdminPage() {
   const mainRef = useRef<HTMLElement | null>(null);
   const [navOpen, setNavOpen] = useState(false); // phone only: the sidebar is a drawer
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [section]);
+  // A staff member lands on the first page their permissions allow.
+  useEffect(() => {
+    if (!access.isAssistant || !access.ready) return;
+    const allowed = CORE_SECTIONS.filter((c) => SECTION_CAP[c.id] && access.can(SECTION_CAP[c.id]));
+    if (!allowed.some((c) => c.id === section)) setSection(allowed[0]?.id ?? section);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access.isAssistant, access.ready, section]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [plRows, setPlRows] = useState<Record<string, any>[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -163,13 +182,13 @@ const [refStops, setRefStops] = useState<{ value: string; label: string }[]>([])
   }
 
   useEffect(() => {
-    if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
+    if (!appUser || !access.isStaff) return;
     if (section.startsWith("wa") && section !== "waPayments" && section !== "waExpenses" && !waTenantId) return;
     loadSectionRows();
   }, [appUser, section, waTenantId]);
 
   useEffect(() => {
-    if (!appUser || (appUser.role !== "owner" && appUser.role !== "admin")) return;
+    if (!appUser || !access.isStaff) return;
     supabase.from("buses").select("bus_id, plate_number").then(({ data }) => setRefBuses((data ?? []).map((b) => ({ value: b.bus_id, label: b.plate_number }))));
     supabase.from("drivers").select("driver_id, full_name").then(({ data }) => setRefDrivers((data ?? []).map((d) => ({ value: d.driver_id, label: d.full_name }))));
 supabase.from("contracts").select("contract_id, client_name").then(async ({ data: contractsData }) => {
@@ -206,9 +225,13 @@ supabase.from("clients").select("client_id, name").then(({ data }) => setRefClie
 if (!appUser) {
   return <AdminLoginForm />;
 }
-if (appUser.role !== "owner" && appUser.role !== "admin") {
+if (!access.isStaff) {
   return <p style={{ padding: 24, color: "var(--steel)" }}>هذه الصفحة مخصصة للإدارة فقط.</p>;
 }
+
+  // Owner/admin see every page; staff only the pages their permissions cover.
+  const visibleCore = CORE_SECTIONS.filter((s) => access.isManager || (SECTION_CAP[s.id] !== undefined && access.can(SECTION_CAP[s.id])));
+  const sectionAllowed = access.isManager || (SECTION_CAP[section] !== undefined && access.can(SECTION_CAP[section]));
 
   const existingIds = rows.map((r) => Object.values(r)[0] as string);
 
@@ -465,12 +488,14 @@ async function handleEditSubmit(values: Record<string, any>) {
           </div>
           <p style={{ color: "white", fontWeight: 800, fontSize: "1.15rem", margin: 0 }}>Buspulse</p>
         </div>
-        {CORE_SECTIONS.map((s) => (
+        {visibleCore.map((s) => (
           <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
             <s.icon size={17} />{s.label}
           </button>
         ))}
 
+        {access.isManager && (
+          <>
         <p className="nav-group-label">الأسطول</p>
         <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
         {isPlatformAdmin && <Link href="/platform" className="nav-item"><Building2 size={17} />إدارة المنصة</Link>}
@@ -498,12 +523,18 @@ async function handleEditSubmit(values: Record<string, any>) {
             <s.icon size={17} />{s.label}
           </button>
         ))}
+          </>
+        )}
         <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
       <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, maxWidth: 1000 }}>
-        <SosFeed />
-        <KpiCards />
+        {access.isManager && <SosFeed />}
+        {access.isManager && <KpiCards />}
+
+        {access.isAssistant && access.ready && visibleCore.length === 0 && (
+          <p style={{ color: "var(--steel)" }}>لم تُمنح أي صلاحية بعد. تواصل مع إدارة الأسطول.</p>
+        )}
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
           <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)" }}>
