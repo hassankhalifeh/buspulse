@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
 import { Phone, PhoneOff, Plus, Trash2, AlertTriangle } from "lucide-react";
 
@@ -19,6 +20,11 @@ interface RingSchedule {
 // these controls, verbatim — this is intentionally hardcoded text,
 // not a database value (see buspulse-whatsapp/06's closing note).
 const RING_COST_WARNING = "انتبه لكلفة المكالمة الهاتفية التي سيتم احتسابها في حال فتح الخط من الطرف المقابل";
+
+const RING_COLUMNS = [
+  { key: "type_label", label: "النوع" }, { key: "target_name", label: "المسار / السائق" },
+  { key: "scheduled_time", label: "الوقت" }, { key: "ring_text", label: "الرنّات" },
+];
 
 export default function RingSchedulePanel({ waTenantId }: { waTenantId: string }) {
   const [ringEnabled, setRingEnabled] = useState(false);
@@ -74,6 +80,17 @@ export default function RingSchedulePanel({ waTenantId }: { waTenantId: string }
     load();
   }
 
+  // Search/filter plug-in (lib/tablekit): derive the visible text once, then filter on it.
+  const view = useMemo(() => schedules.map((s) => ({
+    ...s,
+    type_label: s.target_type === "route" ? "مسار" : "سائق",
+    target_name: s.target_type === "route"
+      ? routes.find((r) => r.value === s.route_id)?.label ?? "مسار"
+      : drivers.find((d) => d.value === s.driver_contact_id)?.label ?? "سائق",
+    ring_text: `${s.ring_count} رنّة × ${s.ring_duration_seconds} ثانية`,
+  })), [schedules, routes, drivers]);
+  const tk = useTableKit(view, RING_COLUMNS);
+
   const nameFor = (s: RingSchedule) =>
     s.target_type === "route"
       ? routes.find((r) => r.value === s.route_id)?.label ?? "مسار"
@@ -104,9 +121,10 @@ export default function RingSchedulePanel({ waTenantId }: { waTenantId: string }
         <Plus size={15} /> إضافة توقيت رنين
       </button>
 
-      {schedules.length === 0 && <p style={{ color: "var(--steel)" }}>لا توجد أوقات مجدولة بعد.</p>}
+      {tk.toolbar}
+      {tk.rows.length === 0 && <p style={{ color: "var(--steel)" }}>{schedules.length === 0 ? "لا توجد أوقات مجدولة بعد." : "لا توجد نتائج مطابقة."}</p>}
 
-      {schedules.map((s) => (
+      {tk.rows.map((s) => (
         <div key={s.id} className="card" style={{ padding: "0.9rem 1.1rem", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <p style={{ margin: 0, fontWeight: 700, fontSize: "0.9rem" }}>

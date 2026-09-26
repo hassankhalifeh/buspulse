@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 
@@ -15,6 +16,12 @@ interface RequestRow {
   created_at: string;
   children: { child_name: string; relation: string }[];
 }
+
+const REQ_STATUS: Record<string, string> = { pending: "بانتظار المراجعة", approved: "موافَق", rejected: "مرفوض" };
+const REQ_COLUMNS = [
+  { key: "full_name", label: "الاسم" }, { key: "phone", label: "الهاتف" }, { key: "school_name", label: "المدرسة" },
+  { key: "address", label: "العنوان" }, { key: "status_label", label: "الحالة" }, { key: "children_text", label: "الأبناء" },
+];
 
 export default function RegistrationRequestsPanel() {
   const [requests, setRequests] = useState<RequestRow[]>([]);
@@ -33,6 +40,14 @@ export default function RegistrationRequestsPanel() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Search/filter plug-in (lib/tablekit): rows are flattened to the text people actually see.
+  const view = useMemo(() => requests.map((r) => ({
+    ...r,
+    status_label: REQ_STATUS[r.status] ?? r.status,
+    children_text: r.children.map((c) => c.child_name).join("، "),
+  })), [requests]);
+  const tk = useTableKit(view, REQ_COLUMNS);
 
   async function decide(id: string, status: "approved" | "rejected") {
     const { error } = await supabase.from("registration_requests").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
@@ -59,11 +74,12 @@ export default function RegistrationRequestsPanel() {
 
   if (loading) return <p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p>;
 
-  const pending = requests.filter((r) => r.status === "pending");
-  const others = requests.filter((r) => r.status !== "pending");
+  const pending = tk.rows.filter((r) => r.status === "pending");
+  const others = tk.rows.filter((r) => r.status !== "pending");
 
   return (
     <div>
+      {tk.toolbar}
       <h3 style={{ marginBottom: 12 }}>طلبات بانتظار المراجعة ({pending.length})</h3>
       {pending.length === 0 && <p style={{ color: "var(--steel)", marginBottom: 20 }}>لا توجد طلبات معلَّقة حالياً.</p>}
       {pending.map((r) => (

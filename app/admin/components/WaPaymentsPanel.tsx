@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTableKit } from "@/lib/tablekit";
 import { supabase } from "@/lib/supabaseClient";
 import type { WaPayment } from "@/lib/types";
 import { AlertTriangle } from "lucide-react";
@@ -14,9 +15,24 @@ interface RowWithNames extends WaPayment {
 // flagged shortfall sits here until the owner picks one of two paths.
 // Both actions are simple status writes — the mirror trigger (file 2
 // of the WhatsApp module SQL) picks up a Confirmed row automatically.
+const PAY_STATUS_AR: Record<string, string> = { Pending: "معلّقة", Underpaid_Flagged: "ناقصة", Confirmed: "مؤكدة", Carried_Forward: "مرحّلة" };
+const PAY_COLUMNS = [
+  { key: "student_label", label: "الطالب" }, { key: "collector_label", label: "حصّلها" }, { key: "status_label", label: "الحالة" },
+  { key: "amount_due", label: "المطلوب" }, { key: "amount_paid", label: "المدفوع" }, { key: "shortfall_amount", label: "النقص" },
+];
+
 export default function WaPaymentsPanel({ waTenantId }: { waTenantId: string }) {
   const [rows, setRows] = useState<RowWithNames[]>([]);
   const [filter, setFilter] = useState<"flagged" | "all">("flagged");
+
+  // Search/filter plug-in (lib/tablekit) over what each card shows.
+  const view = useMemo(() => rows.map((r) => ({
+    ...r,
+    student_label: r.student_name ?? "",
+    collector_label: r.collector_name ?? "",
+    status_label: PAY_STATUS_AR[r.status] ?? r.status,
+  })), [rows]);
+  const tk = useTableKit(view, PAY_COLUMNS);
 
   function load() {
     let query = supabase
@@ -63,9 +79,10 @@ export default function WaPaymentsPanel({ waTenantId }: { waTenantId: string }) 
         </button>
       </div>
 
-      {rows.length === 0 && <p style={{ color: "var(--steel)" }}>لا توجد سجلات.</p>}
+      {tk.toolbar}
+      {tk.rows.length === 0 && <p style={{ color: "var(--steel)" }}>{rows.length === 0 ? "لا توجد سجلات." : "لا توجد نتائج مطابقة."}</p>}
 
-      {rows.map((r) => (
+      {tk.rows.map((r) => (
         <div key={r.id} className="card" style={{ padding: "1rem 1.2rem", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
             <p style={{ margin: 0, fontWeight: 700 }}>
