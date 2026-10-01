@@ -25,7 +25,12 @@ import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 import WaViolationsPanel from "./components/WaViolationsPanel";
 import ReportsPanel from "./components/ReportsPanel";
-import BulkImportPanel from "./components/BulkImportPanel";
+import dynamic from "next/dynamic";
+// مكتبة الأكسل (exceljs) المستخدمة هنا وحدها ثقيلة نسبياً، فنحمّلها فقط عند دخول هذه الصفحة تحديداً
+// بدل تحميلها مع كل فتح للوحة الإدارة
+const BulkImportPanel = dynamic(() => import("./components/BulkImportPanel"), {
+  loading: () => <p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p>,
+});
 import AdminLoginForm from "./components/AdminLoginForm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

@@ -3,7 +3,7 @@
 // needs their guardian/contract/bus, etc). Pure data + the template builder — no React, no Supabase client —
 // so BulkImportPanel.tsx can drive both the template download and the actual row-by-row import from it.
 
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export type SelectOption = { value: string; label: string };
 
@@ -18,15 +18,19 @@ export interface BulkFieldDef {
   type: "text" | "number" | "date" | "select" | "textarea";
   options?: SelectOption[]; // fixed set of valid values (status/type/...)
   ref?: SheetKey;           // this column's typed text is looked up against another sheet's own rows (by name)
-  refHint?: string;         // instructions-sheet note for a ref column
+  refHint?: string;         // instructions-sheet note + header-cell comment for a ref column
 }
 
 export interface BulkSheetDef {
   key: SheetKey;
   name: string; // Excel sheet name, shown to the user
   table: string;
-  idField: string;    // server-generated primary key — never read from the file
-  noFleetId?: boolean; // this table has no fleet_id column (student_route_stops)
+  idField: string;     // server-generated primary key — never read from the file
+  noFleetId?: boolean;  // this table has no fleet_id column (student_route_stops)
+  // the field whose column other sheets' dropdown lists should pull from (only set where that column
+  // is a single literal value the user types — contracts' reference text is computed from two columns
+  // plus a server-filled one, so it has none and gets no cross-sheet dropdown)
+  displayFieldKey?: string;
   fields: BulkFieldDef[];
   // the text later sheets should use to reference a row of this sheet, computed from the inserted row
   display: (row: Record<string, any>) => string;
@@ -34,7 +38,7 @@ export interface BulkSheetDef {
 
 export const BULK_SHEETS: BulkSheetDef[] = [
   {
-    key: "buses", name: "الحافلات", table: "buses", idField: "bus_id",
+    key: "buses", name: "الحافلات", table: "buses", idField: "bus_id", displayFieldKey: "plate_number",
     fields: [
       { key: "plate_number", label: "رقم اللوحة", type: "text", required: true },
       { key: "model", label: "الموديل", type: "text" },
@@ -59,7 +63,7 @@ export const BULK_SHEETS: BulkSheetDef[] = [
     display: (r) => r.full_name ?? "",
   },
   {
-    key: "clients", name: "العملاء", table: "clients", idField: "client_id",
+    key: "clients", name: "العملاء", table: "clients", idField: "client_id", displayFieldKey: "name",
     fields: [
       { key: "name", label: "اسم العميل (مدرسة/شركة/فرد)", type: "text", required: true },
       { key: "client_type", label: "نوع العميل", type: "select", required: true, options: [{ value: "School", label: "مدرسة" }, { value: "Company", label: "شركة" }, { value: "Individual", label: "فرد" }] },
@@ -72,7 +76,7 @@ export const BULK_SHEETS: BulkSheetDef[] = [
     display: (r) => r.name ?? "",
   },
   {
-    key: "guardians", name: "أولياء الأمور", table: "guardians", idField: "guardian_id",
+    key: "guardians", name: "أولياء الأمور", table: "guardians", idField: "guardian_id", displayFieldKey: "full_name",
     fields: [
       { key: "full_name", label: "الاسم الكامل", type: "text", required: true },
       { key: "phone", label: "الهاتف", type: "text" },
@@ -82,7 +86,7 @@ export const BULK_SHEETS: BulkSheetDef[] = [
     display: (r) => r.full_name ?? "",
   },
   {
-    key: "routes", name: "المسارات", table: "routes", idField: "route_id",
+    key: "routes", name: "المسارات", table: "routes", idField: "route_id", displayFieldKey: "route_name",
     fields: [
       { key: "route_name", label: "اسم المسار", type: "text", required: true },
       { key: "bus_id", label: "الحافلة", type: "select", required: true, ref: "buses", refHint: "اكتب رقم اللوحة بالضبط كما في ورقة الحافلات" },
@@ -93,7 +97,7 @@ export const BULK_SHEETS: BulkSheetDef[] = [
     display: (r) => r.route_name ?? "",
   },
   {
-    key: "routeStops", name: "نقاط التوقف", table: "route_stops", idField: "stop_id",
+    key: "routeStops", name: "نقاط التوقف", table: "route_stops", idField: "stop_id", displayFieldKey: "stop_name",
     fields: [
       { key: "stop_name", label: "اسم النقطة", type: "text", required: true },
       { key: "route_id", label: "المسار", type: "select", required: true, ref: "routes", refHint: "اكتب اسم المسار بالضبط كما في ورقة المسارات" },
@@ -119,7 +123,7 @@ export const BULK_SHEETS: BulkSheetDef[] = [
     display: (r) => `${r.client_name ?? ""} — ${r.period_label ?? ""}`,
   },
   {
-    key: "students", name: "الطلاب", table: "students", idField: "student_id",
+    key: "students", name: "الطلاب", table: "students", idField: "student_id", displayFieldKey: "full_name",
     fields: [
       { key: "full_name", label: "اسم الطالب", type: "text", required: true },
       { key: "guardian_id", label: "ولي الأمر", type: "select", required: true, ref: "guardians", refHint: "اكتب الاسم الكامل لولي الأمر بالضبط كما في ورقة أولياء الأمور" },
@@ -167,31 +171,85 @@ export const BULK_SHEETS: BulkSheetDef[] = [
   },
 ];
 
-export function buildBulkTemplate() {
-  const wb = XLSX.utils.book_new();
-  const notes: (string | number)[][] = [["الورقة", "العمود", "مطلوب؟", "ملاحظات"]];
+// أقصى عدد سطور بيانات تغطّيها القائمة المنسدلة والتنسيق الشرطي في كل عمود — كافٍ لأي أسطول عملياً،
+// وأي سطر بعده يبقى قابلاً للتعبئة يدوياً بلا قائمة منسدلة فقط
+const MAX_DATA_ROWS = 500;
+
+function colLetter(n: number): string {
+  let s = "";
+  while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+function fieldNote(f: BulkFieldDef): string {
+  return f.ref ? (f.refHint ?? `مرجع إلى ورقة "${BULK_SHEETS.find((s) => s.key === f.ref)?.name}"`) :
+    f.type === "select" && f.options?.length ? "اكتب إحدى القيم التالية بالضبط: " + f.options.map((o) => o.label).join(" / ") :
+    f.type === "date" ? "بصيغة سنة-شهر-يوم، مثلاً 2026-09-01" :
+    f.type === "number" ? "رقم فقط" : "";
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+const FILL_REQUIRED: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE4D6" } }; // دافئ خفيف: حقل إلزامي
+const FILL_REF: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDDEBF7" } }; // أزرق خفيف: مرتبط بورقة أخرى
+
+export async function buildBulkTemplate() {
+  const wb = new ExcelJS.Workbook();
+
+  // ورقة التعليمات أولاً لتكون ما يُفتح أمام صاحب الأسطول أولاً، وتُملأ أثناء إنشاء بقية الأوراق أدناه
+  const notesWs = wb.addWorksheet("تعليمات", { views: [{ rightToLeft: true }] });
+  notesWs.columns = [{ header: "الورقة", width: 20 }, { header: "العمود", width: 34 }, { header: "مطلوب؟", width: 10 }, { header: "ملاحظات", width: 65 }];
+  notesWs.getRow(1).font = { bold: true };
+  notesWs.addRow(["", "", "", "الأعمدة الملوّنة بالبرتقالي الفاتح إلزامية، والملوّنة بالأزرق الفاتح مرتبطة بقيمة من ورقة أخرى ولها قائمة منسدلة بالضغط على الخلية — مرّر الفأرة فوق أي عنوان عمود لرؤية شرحه مباشرة."]);
+
+  // الأوراق المرجعية (كالحافلات) يجب أن تُنشأ قبل الأوراق التي تشير إليها (كالمسارات) حتى تتوفر خلاياها لقائمة الإشارة المنسدلة
+  const colByKey = new Map<SheetKey, Map<string, number>>(); // sheet -> field key -> 1-based column index
 
   for (const sheet of BULK_SHEETS) {
-    const headers = sheet.fields.map((f) => `${f.label}${f.required ? " *" : ""}`);
-    const ws = XLSX.utils.aoa_to_sheet([headers]);
-    ws["!cols"] = headers.map(() => ({ wch: 26 }));
-    XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+    const ws = wb.addWorksheet(sheet.name, { views: [{ rightToLeft: true }] });
+    ws.columns = sheet.fields.map((f) => ({ header: `${f.label}${f.required ? " *" : ""}`, key: f.key, width: 28 }));
+    ws.getRow(1).font = { bold: true };
 
-    for (const f of sheet.fields) {
-      const note =
-        f.ref ? (f.refHint ?? `مرجع إلى ورقة "${BULK_SHEETS.find((s) => s.key === f.ref)?.name}"`) :
-        f.type === "select" && f.options?.length ? "اكتب إحدى القيم التالية بالضبط: " + f.options.map((o) => o.label).join(" / ") :
-        f.type === "date" ? "بصيغة سنة-شهر-يوم، مثلاً 2026-09-01" :
-        f.type === "number" ? "رقم فقط" : "";
-      notes.push([sheet.name, f.label, f.required ? "نعم" : "لا", note]);
-    }
+    const fieldCols = new Map<string, number>();
+    sheet.fields.forEach((f, i) => {
+      fieldCols.set(f.key, i + 1);
+      const cell = ws.getRow(1).getCell(i + 1);
+      if (f.ref) cell.fill = FILL_REF;
+      else if (f.required) cell.fill = FILL_REQUIRED;
+      const note = fieldNote(f);
+      if (note) cell.note = note;
+      notesWs.addRow([sheet.name, f.label, f.required ? "نعم" : "لا", note]);
+    });
+    colByKey.set(sheet.key, fieldCols);
   }
 
-  const notesSheet = XLSX.utils.aoa_to_sheet(notes);
-  notesSheet["!cols"] = [{ wch: 20 }, { wch: 32 }, { wch: 10 }, { wch: 60 }];
-  XLSX.utils.book_append_sheet(wb, notesSheet, "تعليمات");
-  // instructions first, so it's what the owner sees on opening the file
-  wb.SheetNames.unshift(wb.SheetNames.pop()!);
+  // قوائم منسدلة: قيم ثابتة للأعمدة المغلقة (كالحالة)، وقائمة من عمود ورقة أخرى للأعمدة المرتبطة بسجل هناك
+  for (const sheet of BULK_SHEETS) {
+    const ws = wb.getWorksheet(sheet.name)!;
+    sheet.fields.forEach((f, i) => {
+      let formula: string | null = null;
+      if (f.ref) {
+        const targetSheet = BULK_SHEETS.find((s) => s.key === f.ref);
+        const targetCol = targetSheet?.displayFieldKey ? colByKey.get(f.ref)?.get(targetSheet.displayFieldKey) : undefined;
+        if (targetSheet && targetCol) formula = `'${targetSheet.name}'!$${colLetter(targetCol)}$2:$${colLetter(targetCol)}$${MAX_DATA_ROWS}`;
+      } else if (f.type === "select" && f.options?.length) {
+        formula = `"${f.options.map((o) => o.label).join(",")}"`;
+      }
+      if (!formula) return;
+      const validation: ExcelJS.DataValidation = {
+        type: "list", allowBlank: true, formulae: [formula],
+        showErrorMessage: true, errorStyle: "stop", errorTitle: "قيمة غير موجودة في اللائحة",
+        error: "اختر قيمة من القائمة المنسدلة لهذه الخلية (أو من الورقة المرجعية لها).",
+      };
+      for (let row = 2; row <= MAX_DATA_ROWS; row++) ws.getCell(row, i + 1).dataValidation = validation;
+    });
+  }
 
-  XLSX.writeFile(wb, "نموذج-استيراد-شامل.xlsx");
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "نموذج-استيراد-شامل.xlsx");
 }
