@@ -37,6 +37,7 @@ import { useRouter } from "next/navigation";
 import { Settings, Building2 } from "lucide-react";
 import { useFleetInfo } from "@/lib/useFleetInfo";
 import { useStaffCaps } from "@/lib/useStaffCaps";
+import { useFleetBackground } from "@/lib/useFleetBackground";
 import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
@@ -130,6 +131,7 @@ export default function AdminPage() {
   const { fleet: fleetInfo } = useFleetInfo(appUser);
   const waAddonActive = useWhatsappAddon(appUser);
   const access = useStaffCaps(appUser);
+  const { effectiveUrl: backgroundUrl } = useFleetBackground(fleetId);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   // A brand-new fleet owner must first replace the temporary password and enter the fleet's information.
@@ -524,10 +526,14 @@ async function handleEditSubmit(values: Record<string, any>) {
           </button>
         ))}
 
-        {access.isManager && (
+        {(access.isManager || !fleetInfo?.background_locked_for_staff) && (
           <>
         <p className="nav-group-label">الأسطول</p>
-        <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
+        <Link href="/admin/settings" className="nav-item"><Settings size={17} />{access.isManager ? "إعدادات الأسطول" : "خلفية لوحة الإدارة"}</Link>
+          </>
+        )}
+        {access.isManager && (
+          <>
         <button onClick={() => setSection("bulkImport")} className={`nav-item ${section === "bulkImport" ? "active" : ""}`}>
           <FileSpreadsheet size={17} />استيراد شامل
         </button>
@@ -561,7 +567,14 @@ async function handleEditSubmit(values: Record<string, any>) {
         <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
-      <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, maxWidth: 1000 }}>
+      <main
+        ref={mainRef}
+        className="fade-in admin-main"
+        style={{
+          flex: 1, maxWidth: 1000,
+          ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "top center", backgroundRepeat: "no-repeat" } : {}),
+        }}
+      >
         {access.isManager && <SosFeed />}
         {access.isManager && <KpiCards />}
 

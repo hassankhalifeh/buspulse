@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, KeyRound } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTableKit } from "@/lib/tablekit";
+import BackgroundPicker from "../admin/components/BackgroundPicker";
 
 interface FleetRow {
   tenant_id: string;
@@ -115,13 +116,39 @@ export default function PlatformPage() {
     load();
   }
 
+  const [defaultBackgroundUrl, setDefaultBackgroundUrl] = useState<string | null>(null);
+  const loadBackground = useCallback(async () => {
+    const { data } = await supabase.from("platform_settings").select("default_background_image_url").eq("id", true).maybeSingle();
+    setDefaultBackgroundUrl(data?.default_background_image_url ?? null);
+  }, []);
+
+  async function uploadDefaultBackground(file: File): Promise<string | null> {
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `platform/default.${ext}`;
+    const { error: upErr } = await supabase.storage.from("backgrounds").upload(path, file, { upsert: true, cacheControl: "3600" });
+    if (upErr) return "تعذّر رفع الصورة: " + upErr.message;
+    const { data } = supabase.storage.from("backgrounds").getPublicUrl(path);
+    const url = `${data.publicUrl}?v=${Date.now()}`;
+    const { error: dbErr } = await supabase.from("platform_settings").update({ default_background_image_url: url }).eq("id", true);
+    if (dbErr) return dbErr.message;
+    await loadBackground();
+    return null;
+  }
+
+  async function removeDefaultBackground(): Promise<string | null> {
+    const { error } = await supabase.from("platform_settings").update({ default_background_image_url: null }).eq("id", true);
+    if (error) return error.message;
+    await loadBackground();
+    return null;
+  }
+
   useEffect(() => {
     supabase.rpc("is_platform_admin").then(({ data }) => {
       const ok = data === true;
       setAllowed(ok);
-      if (ok) load();
+      if (ok) { load(); loadBackground(); }
     });
-  }, [load]);
+  }, [load, loadBackground]);
 
   async function createOwner(e: React.FormEvent) {
     e.preventDefault();
@@ -191,6 +218,16 @@ export default function PlatformPage() {
             {created.warning && <p style={{ marginTop: 10, color: "#8A5A00", fontSize: "0.84rem" }}>⚠️ {created.warning}</p>}
           </div>
         )}
+      </div>
+
+      <div style={{ marginBottom: 18 }}>
+        <BackgroundPicker
+          title="الخلفية الافتراضية لكل الأساطيل"
+          description="تظهر خلف لوحة إدارة أي أسطول لم يضع خلفية خاصة به."
+          currentUrl={defaultBackgroundUrl}
+          onUpload={uploadDefaultBackground}
+          onRemove={removeDefaultBackground}
+        />
       </div>
 
       {message && <p style={{ color: message.ok ? "green" : "var(--red)", fontSize: "0.9rem", marginBottom: 12 }}>{message.text}</p>}

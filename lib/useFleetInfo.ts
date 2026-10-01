@@ -21,6 +21,7 @@ export interface FleetInfo {
   notes: string | null;
   onboarding_completed: boolean;
   login_slug?: string;
+  background_locked_for_staff: boolean;
 }
 
 // The signed-in owner/admin's own fleet (RLS only ever returns their fleet).
