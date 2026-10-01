@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   BusFront, Users, FileText, UserRound, GraduationCap,
   Wallet, TrendingUp, Megaphone, Plus, MessageCircle, MapPinned,
-  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X, FileSpreadsheet,
+  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X, FileSpreadsheet, Star,
 } from "lucide-react";
 import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
@@ -37,6 +37,7 @@ import { useRouter } from "next/navigation";
 import { Settings, Building2 } from "lucide-react";
 import { useFleetInfo } from "@/lib/useFleetInfo";
 import { useStaffCaps } from "@/lib/useStaffCaps";
+import { useFleetBackground } from "@/lib/useFleetBackground";
 import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
@@ -130,6 +131,7 @@ export default function AdminPage() {
   const { fleet: fleetInfo } = useFleetInfo(appUser);
   const waAddonActive = useWhatsappAddon(appUser);
   const access = useStaffCaps(appUser);
+  const { effectiveUrl: backgroundUrl } = useFleetBackground(fleetId);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   // A brand-new fleet owner must first replace the temporary password and enter the fleet's information.
@@ -150,6 +152,24 @@ export default function AdminPage() {
   const mainRef = useRef<HTMLElement | null>(null);
   const [navOpen, setNavOpen] = useState(false); // phone only: the sidebar is a drawer
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [section]);
+
+  // الصفحة الرئيسية التي اختارها هذا المستخدم لنفسه (أي قسم زاره، عبر النجمة بجانب عنوانه) — تُفتح
+  // تلقائياً بدل "الحافلات"؛ تُطبَّق مرة واحدة فقط عند تحميل حساب المستخدم، ثم يتحكم بها هو بالتنقل العادي
+  const [homeSection, setHomeSection] = useState<string | null>(null);
+  const appliedHomeSection = useRef(false);
+  useEffect(() => { setHomeSection(appUser?.default_section ?? null); }, [appUser?.default_section]);
+  useEffect(() => {
+    if (appliedHomeSection.current || !appUser || !access.ready) return;
+    appliedHomeSection.current = true;
+    if (appUser.default_section) setSection(appUser.default_section as Section);
+  }, [appUser, access.ready]);
+  async function toggleHomeSection() {
+    if (!appUser) return;
+    const next = homeSection === section ? null : section;
+    setHomeSection(next);
+    await supabase.from("app_users").update({ default_section: next }).eq("id", appUser.id);
+  }
+
   // A staff member lands on the first page their permissions allow.
   useEffect(() => {
     if (!access.isAssistant || !access.ready) return;
@@ -506,10 +526,14 @@ async function handleEditSubmit(values: Record<string, any>) {
           </button>
         ))}
 
-        {access.isManager && (
+        {(access.isManager || !fleetInfo?.background_locked_for_staff) && (
           <>
         <p className="nav-group-label">الأسطول</p>
-        <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
+        <Link href="/admin/settings" className="nav-item"><Settings size={17} />{access.isManager ? "إعدادات الأسطول" : "خلفية لوحة الإدارة"}</Link>
+          </>
+        )}
+        {access.isManager && (
+          <>
         <button onClick={() => setSection("bulkImport")} className={`nav-item ${section === "bulkImport" ? "active" : ""}`}>
           <FileSpreadsheet size={17} />استيراد شامل
         </button>
@@ -543,7 +567,14 @@ async function handleEditSubmit(values: Record<string, any>) {
         <LogoutButton variant="nav" redirectTo="/admin" />
       </nav>
 
-      <main ref={mainRef} className="fade-in admin-main" style={{ flex: 1, maxWidth: 1000 }}>
+      <main
+        ref={mainRef}
+        className="fade-in admin-main"
+        style={{
+          flex: 1, maxWidth: 1000,
+          ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "top center", backgroundRepeat: "no-repeat" } : {}),
+        }}
+      >
         {access.isManager && <SosFeed />}
         {access.isManager && <KpiCards />}
 
@@ -552,8 +583,16 @@ async function handleEditSubmit(values: Record<string, any>) {
         )}
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
-          <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)" }}>
+          <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)", display: "flex", alignItems: "center", gap: 8 }}>
             {sectionLabel(section)}
+            <button
+              type="button"
+              onClick={toggleHomeSection}
+              title={homeSection === section ? "هذه صفحتك الرئيسية — اضغط لإلغائها" : "اجعل هذه صفحتي الرئيسية"}
+              style={{ background: "none", border: "none", cursor: "pointer", display: "inline-flex", padding: 2 }}
+            >
+              <Star size={18} fill={homeSection === section ? "var(--orange)" : "none"} color={homeSection === section ? "var(--orange)" : "var(--steel-light)"} />
+            </button>
           </h2>
 {fields && (
   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
