@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   BusFront, Users, FileText, UserRound, GraduationCap,
   Wallet, TrendingUp, Megaphone, Plus, MessageCircle, MapPinned,
-  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X, FileSpreadsheet, Star,
+  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X, FileSpreadsheet, Star, Home,
 } from "lucide-react";
 import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
@@ -25,6 +25,7 @@ import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 import WaViolationsPanel from "./components/WaViolationsPanel";
 import ReportsPanel from "./components/ReportsPanel";
+import HomePanel from "./components/HomePanel";
 import dynamic from "next/dynamic";
 // مكتبة الأكسل (exceljs) المستخدمة هنا وحدها ثقيلة نسبياً، فنحمّلها فقط عند دخول هذه الصفحة تحديداً
 // بدل تحميلها مع كل فتح للوحة الإدارة
@@ -41,6 +42,7 @@ import { useFleetBackground } from "@/lib/useFleetBackground";
 import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 
 type Section =
+  | "home"
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
   | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations" | "reports" | "bulkImport";
@@ -56,6 +58,7 @@ const SECTION_CAP: Partial<Record<Section, string>> = {
 };
 
 const CORE_SECTIONS: { id: Section; label: string; icon: any }[] = [
+  { id: "home", label: "الصفحة الرئيسية", icon: Home },
   { id: "buses", label: "الحافلات", icon: BusFront },
 { id: "routes", label: "المسارات", icon: MapPinned },
   { id: "routeStops", label: "نقاط التوقف", icon: MapPinned },
@@ -147,7 +150,7 @@ export default function AdminPage() {
     supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true));
   }, [appUser]);
 
-  const [section, setSection] = useState<Section>("buses");
+  const [section, setSection] = useState<Section>("home");
   // The sidebar and the content scroll independently; choosing another page starts it at the top.
   const mainRef = useRef<HTMLElement | null>(null);
   const [navOpen, setNavOpen] = useState(false); // phone only: the sidebar is a drawer
@@ -173,7 +176,7 @@ export default function AdminPage() {
   // A staff member lands on the first page their permissions allow.
   useEffect(() => {
     if (!access.isAssistant || !access.ready) return;
-    const allowed = CORE_SECTIONS.filter((c) => SECTION_CAP[c.id] && access.can(SECTION_CAP[c.id]));
+    const allowed = CORE_SECTIONS.filter((c) => c.id === "home" || (SECTION_CAP[c.id] && access.can(SECTION_CAP[c.id])));
     if (!allowed.some((c) => c.id === section)) setSection(allowed[0]?.id ?? section);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [access.isAssistant, access.ready, section]);
@@ -262,7 +265,7 @@ if (!access.isStaff) {
 }
 
   // Owner/admin see every page; staff only the pages their permissions cover.
-  const visibleCore = CORE_SECTIONS.filter((s) => access.isManager || (SECTION_CAP[s.id] !== undefined && access.can(SECTION_CAP[s.id])));
+  const visibleCore = CORE_SECTIONS.filter((s) => s.id === "home" || access.isManager || (SECTION_CAP[s.id] !== undefined && access.can(SECTION_CAP[s.id])));
   const sectionAllowed = access.isManager || (SECTION_CAP[section] !== undefined && access.can(SECTION_CAP[section]));
 
   const existingIds = rows.map((r) => Object.values(r)[0] as string);
@@ -604,7 +607,9 @@ async function handleEditSubmit(values: Record<string, any>) {
 )}
         </div>
 
-        {section === "pl" ? (
+        {section === "home" ? (
+          <HomePanel appUser={appUser} sections={visibleCore.filter((s) => s.id !== "home")} onNavigate={(id) => setSection(id as Section)} />
+        ) : section === "pl" ? (
           <SimpleTable
             columns={[
               { key: "plate_number", label: "الحافلة" }, { key: "month", label: "الشهر" },
