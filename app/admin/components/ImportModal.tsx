@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Download } from "lucide-react";
 import type { FieldConfig } from "./AddEntityModal";
+import { normalizeText } from "@/lib/tablekit";
 
 interface RowResult {
   data: Record<string, any>;
@@ -16,6 +17,31 @@ interface Props {
   fields: FieldConfig[];
   onConfirm: (rows: Record<string, any>[]) => Promise<{ successCount: number; failCount: number; errors: string[] }>;
   onClose: () => void;
+}
+
+// نموذج فارغ بعناوين عربية مطابقة لحقول هذا القسم بالذات، وورقة ثانية بشرح القيم المسموحة لكل عمود
+// (خصوصاً أعمدة الاختيار، حيث يكتب المستخدم النص العربي الذي يراه وتتم ترجمته تلقائياً عند الرفع).
+function downloadTemplate(title: string, fields: FieldConfig[]) {
+  const visible = fields.filter((f) => !f.disabled);
+  const headers = visible.map((f) => `${f.label}${f.required ? " *" : ""}`);
+  const dataSheet = XLSX.utils.aoa_to_sheet([headers]);
+  dataSheet["!cols"] = headers.map(() => ({ wch: 24 }));
+
+  const notes: (string | number)[][] = [["العمود", "مطلوب؟", "ملاحظات"]];
+  for (const f of visible) {
+    const note =
+      f.type === "select" && f.options?.length ? "اكتب إحدى القيم التالية بالضبط: " + f.options.map((o) => o.label).join(" / ") :
+      f.type === "date" ? "بصيغة سنة-شهر-يوم، مثلاً 2026-09-01" :
+      f.type === "number" ? "رقم فقط" : "";
+    notes.push([f.label, f.required ? "نعم" : "لا", note]);
+  }
+  const notesSheet = XLSX.utils.aoa_to_sheet(notes);
+  notesSheet["!cols"] = [{ wch: 26 }, { wch: 10 }, { wch: 55 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, dataSheet, "البيانات");
+  XLSX.utils.book_append_sheet(wb, notesSheet, "تعليمات");
+  XLSX.writeFile(wb, `نموذج-${title}.xlsx`);
 }
 
 export default function ImportModal({ title, fields, onConfirm, onClose }: Props) {
@@ -46,13 +72,29 @@ export default function ImportModal({ title, fields, onConfirm, onClose }: Props
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const raw: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      // مطابقة عناوين الأعمدة (قد تحوي وصفاً بالعربي بين قوسين) بمفاتيح الحقول الفعلية
+      // مطابقة عناوين الأعمدة بحقول هذا القسم: أولاً بعنوان النموذج العربي (يتجاهل "*" والمسافات واختلاف الهمزة/التاء)،
+      // ثم بمفتاح الحقل الإنكليزي للتوافق مع ملفات قديمة كُتبت عناوينها يدوياً بالمفتاح نفسه
+      function matchField(header: string): FieldConfig | undefined {
+        const clean = normalizeText(header.replace(/\*\s*$/, ""));
+        return (
+          fields.find((f) => !f.disabled && normalizeText(f.label) === clean) ??
+          fields.find((f) => !f.disabled && header.toLowerCase().startsWith(f.key.toLowerCase()))
+        );
+      }
+
       const mapped = raw.map((row) => {
         const cleanRow: Record<string, any> = {};
         for (const key of Object.keys(row)) {
           // المعرّفات التلقائية (disabled) تُولَّد في الخادم، فنتجاهل أي قيمة لها في الملف
-          const matchedField = fields.find((f) => !f.disabled && key.startsWith(f.key));
-          if (matchedField) cleanRow[matchedField.key] = String(row[key]).trim();
+          const matchedField = matchField(key);
+          if (!matchedField) continue;
+          let value = String(row[key]).trim();
+          // أعمدة الاختيار: يكتب المستخدم النص العربي الظاهر في النموذج، فنحوّله إلى القيمة الفعلية المخزَّنة
+          if (matchedField.type === "select" && matchedField.options) {
+            const opt = matchedField.options.find((o) => o.value === value || normalizeText(o.label) === normalizeText(value));
+            if (opt) value = opt.value;
+          }
+          cleanRow[matchedField.key] = value;
         }
         return cleanRow;
       });
@@ -89,11 +131,16 @@ export default function ImportModal({ title, fields, onConfirm, onClose }: Props
         </div>
 
         {!parsedRows && !result && (
-          <label className="card card-interactive" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "2.5rem", border: "2px dashed var(--fog-dark)", cursor: "pointer" }}>
-            <Upload size={28} color="var(--steel)" />
-            <span>اضغط لاختيار ملف Excel (ورقة واحدة)</span>
-            <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
-          </label>
+          <>
+            <button type="button" onClick={() => downloadTemplate(title, fields)} className="btn btn-secondary" style={{ width: "100%", marginBottom: 14 }}>
+              <Download size={16} /> تنزيل نموذج Excel فارغ
+            </button>
+            <label className="card card-interactive" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "2.5rem", border: "2px dashed var(--fog-dark)", cursor: "pointer" }}>
+              <Upload size={28} color="var(--steel)" />
+              <span>اضغط لاختيار ملف Excel (ورقة واحدة)</span>
+              <input type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
+            </label>
+          </>
         )}
 
         {parsedRows && !result && (
