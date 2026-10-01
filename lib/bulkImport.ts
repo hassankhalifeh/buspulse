@@ -171,6 +171,10 @@ export const BULK_SHEETS: BulkSheetDef[] = [
   },
 ];
 
+// الأوراق التي تُستخدم كمرجع من أوراق أخرى (كالحافلات لورقة المسارات) — هذه وحدها يُجلب لها الموجود
+// فعلاً في الأسطول عند بناء النموذج، لتظهر في القائمة المنسدلة لا أن تبقى القائمة فارغة حتى تُكتب يدوياً
+export const REFERENCED_SHEET_KEYS = new Set<SheetKey>(BULK_SHEETS.flatMap((s) => s.fields.filter((f) => f.ref).map((f) => f.ref!)));
+
 // أقصى عدد سطور بيانات تغطّيها القائمة المنسدلة والتنسيق الشرطي في كل عمود — كافٍ لأي أسطول عملياً،
 // وأي سطر بعده يبقى قابلاً للتعبئة يدوياً بلا قائمة منسدلة فقط
 const MAX_DATA_ROWS = 500;
@@ -197,8 +201,13 @@ function downloadBlob(blob: Blob, filename: string) {
 
 const FILL_REQUIRED: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE4D6" } }; // دافئ خفيف: حقل إلزامي
 const FILL_REF: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDDEBF7" } }; // أزرق خفيف: مرتبط بورقة أخرى
+const FILL_EXISTING: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } }; // رمادي فاتح: سطر موجود مسبقاً في النظام
 
-export async function buildBulkTemplate() {
+// الأسطول الحالي: الصفوف الموجودة مسبقاً في كل ورقة من الأوراق المرجعية (REFERENCED_SHEET_KEYS)، بصيغة
+// صفوف الجدول نفسه (bus_id/driver_id/... وقيمها الفعلية) — تُجلب في BulkImportPanel.tsx قبل استدعاء هذه الدالة
+export type ExistingRows = Partial<Record<SheetKey, Record<string, any>[]>>;
+
+export async function buildBulkTemplate(existing: ExistingRows = {}) {
   const wb = new ExcelJS.Workbook();
 
   // ورقة التعليمات أولاً لتكون ما يُفتح أمام صاحب الأسطول أولاً، وتُملأ أثناء إنشاء بقية الأوراق أدناه
@@ -206,9 +215,18 @@ export async function buildBulkTemplate() {
   notesWs.columns = [{ header: "الورقة", width: 20 }, { header: "العمود", width: 34 }, { header: "مطلوب؟", width: 10 }, { header: "ملاحظات", width: 65 }];
   notesWs.getRow(1).font = { bold: true };
   notesWs.addRow(["", "", "", "الأعمدة الملوّنة بالبرتقالي الفاتح إلزامية، والملوّنة بالأزرق الفاتح مرتبطة بقيمة من ورقة أخرى ولها قائمة منسدلة بالضغط على الخلية — مرّر الفأرة فوق أي عنوان عمود لرؤية شرحه مباشرة."]);
+  notesWs.addRow(["", "", "", "الصفوف الرمادية بأعلى بعض الأوراق موجودة مسبقاً في أسطولك — أُدرجت هنا فقط لتظهر في القوائم المنسدلة بالأوراق الأخرى؛ تجاهلها بأمان (لن تُستورد مرة ثانية)، وأضف أي جديد في صف فارغ أسفلها."]);
+
+  // id → النص المرجعي لكل صف موجود مسبقاً، حتى يمكن لسطر لاحق (كمسار يشير إلى حافلة) إظهار اسمها لا معرّفها الداخلي
+  const idToDisplay = new Map<SheetKey, Map<string, string>>();
+  for (const sheet of BULK_SHEETS) {
+    const rows = existing[sheet.key] ?? [];
+    idToDisplay.set(sheet.key, new Map(rows.map((r) => [r[sheet.idField], sheet.display(r)])));
+  }
 
   // الأوراق المرجعية (كالحافلات) يجب أن تُنشأ قبل الأوراق التي تشير إليها (كالمسارات) حتى تتوفر خلاياها لقائمة الإشارة المنسدلة
   const colByKey = new Map<SheetKey, Map<string, number>>(); // sheet -> field key -> 1-based column index
+  const maxRowBySheet = new Map<SheetKey, number>();
 
   for (const sheet of BULK_SHEETS) {
     const ws = wb.addWorksheet(sheet.name, { views: [{ rightToLeft: true }] });
@@ -226,17 +244,35 @@ export async function buildBulkTemplate() {
       notesWs.addRow([sheet.name, f.label, f.required ? "نعم" : "لا", note]);
     });
     colByKey.set(sheet.key, fieldCols);
+
+    // تعبئة الموجود مسبقاً من هذا الجدول (للأوراق المرجعية فقط) حتى يظهر في القوائم المنسدلة التي تشير إليه
+    const existingRows = REFERENCED_SHEET_KEYS.has(sheet.key) ? (existing[sheet.key] ?? []) : [];
+    existingRows.forEach((row, r) => {
+      const excelRow = ws.getRow(r + 2);
+      sheet.fields.forEach((f, i) => {
+        const raw = row[f.key];
+        const text =
+          f.ref ? (idToDisplay.get(f.ref)?.get(raw) ?? "") :
+          f.type === "select" && f.options ? (f.options.find((o) => o.value === raw)?.label ?? raw ?? "") :
+          raw ?? "";
+        excelRow.getCell(i + 1).value = text;
+      });
+      excelRow.eachCell({ includeEmpty: true }, (cell) => { cell.fill = FILL_EXISTING; });
+    });
+    maxRowBySheet.set(sheet.key, Math.max(MAX_DATA_ROWS, existingRows.length + 200));
   }
 
-  // قوائم منسدلة: قيم ثابتة للأعمدة المغلقة (كالحالة)، وقائمة من عمود ورقة أخرى للأعمدة المرتبطة بسجل هناك
+  // قوائم منسدلة: قيم ثابتة للأعمدة المغلقة (كالحالة)، وقائمة من عمود ورقة أخرى (تشمل الموجود مسبقاً أعلاه) للأعمدة المرتبطة بسجل هناك
   for (const sheet of BULK_SHEETS) {
     const ws = wb.getWorksheet(sheet.name)!;
+    const sheetMaxRow = maxRowBySheet.get(sheet.key)!;
     sheet.fields.forEach((f, i) => {
       let formula: string | null = null;
       if (f.ref) {
         const targetSheet = BULK_SHEETS.find((s) => s.key === f.ref);
         const targetCol = targetSheet?.displayFieldKey ? colByKey.get(f.ref)?.get(targetSheet.displayFieldKey) : undefined;
-        if (targetSheet && targetCol) formula = `'${targetSheet.name}'!$${colLetter(targetCol)}$2:$${colLetter(targetCol)}$${MAX_DATA_ROWS}`;
+        const targetMaxRow = targetSheet ? maxRowBySheet.get(targetSheet.key) : undefined;
+        if (targetSheet && targetCol && targetMaxRow) formula = `'${targetSheet.name}'!$${colLetter(targetCol)}$2:$${colLetter(targetCol)}$${targetMaxRow}`;
       } else if (f.type === "select" && f.options?.length) {
         formula = `"${f.options.map((o) => o.label).join(",")}"`;
       }
@@ -246,7 +282,7 @@ export async function buildBulkTemplate() {
         showErrorMessage: true, errorStyle: "stop", errorTitle: "قيمة غير موجودة في اللائحة",
         error: "اختر قيمة من القائمة المنسدلة لهذه الخلية (أو من الورقة المرجعية لها).",
       };
-      for (let row = 2; row <= MAX_DATA_ROWS; row++) ws.getCell(row, i + 1).dataValidation = validation;
+      for (let row = 2; row <= sheetMaxRow; row++) ws.getCell(row, i + 1).dataValidation = validation;
     });
   }
 
