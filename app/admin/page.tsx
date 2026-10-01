@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   BusFront, Users, FileText, UserRound, GraduationCap,
   Wallet, TrendingUp, Megaphone, Plus, MessageCircle, MapPinned,
-  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X,
+  Receipt, Radio, History, CalendarOff, ShieldCheck, PhoneCall, BookOpen, ToggleLeft, Upload, FileBarChart, Menu, X, FileSpreadsheet,
 } from "lucide-react";
 import KpiCards from "./components/KpiCards";
 import SosFeed from "./components/SosFeed";
@@ -25,6 +25,7 @@ import RingSchedulePanel from "./components/RingSchedulePanel";
 import RegistrationRequestsPanel from "./components/RegistrationRequestsPanel";
 import WaViolationsPanel from "./components/WaViolationsPanel";
 import ReportsPanel from "./components/ReportsPanel";
+import BulkImportPanel from "./components/BulkImportPanel";
 import AdminLoginForm from "./components/AdminLoginForm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,7 +37,7 @@ import { useWhatsappAddon } from "@/lib/useWhatsappAddon";
 type Section =
   | "buses" | "drivers" | "contracts" | "guardians" | "students" | "payments" | "pl" | "announcements" | "loginActivity" | "routes" | "routeStops" | "studentRouteStops" | "registrationRequests" | "clients"
   | "waContacts" | "waRoutes" | "waStudents" | "waPayments" | "waExpenses" | "waBroadcasts" | "waMessages" | "waHolidays"
-  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations" | "reports";
+  | "waRingSchedule" | "waExamSchedules" | "waOverrides" | "permissions" | "waViolations" | "reports" | "bulkImport";
 
 // What a staff member ("assistant") needs to open each page; pages not listed are for owner/admin only.
 const SECTION_CAP: Partial<Record<Section, string>> = {
@@ -109,6 +110,12 @@ studentRouteStops: { table: "student_route_stops", columns: [{ key: "student_id"
   waOverrides: { table: "wa_daily_reminder_overrides", columns: [{ key: "scope_type", label: "النطاق" }, { key: "override_date", label: "التاريخ" }, { key: "is_enabled", label: "مفعّل" }], orderBy: "override_date" },
   loginActivity: { table: "login_activity_log", columns: [{ key: "entity_type", label: "النوع" }, { key: "entity_id", label: "المعرّف" }, { key: "logged_in_at", label: "وقت الدخول" }], orderBy: "logged_in_at" },
 };
+
+// أقسام لها زر في اللائحة الجانبية لكنها خارج CORE_SECTIONS/WA_SECTIONS (صفحة كاملة خاصة، لا جدول عام)
+const EXTRA_SECTION_LABELS: Partial<Record<Section, string>> = { bulkImport: "استيراد شامل" };
+function sectionLabel(id: Section): string | undefined {
+  return [...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === id)?.label ?? EXTRA_SECTION_LABELS[id];
+}
 
 export default function AdminPage() {
   const { appUser, loading } = useAppUser();
@@ -473,7 +480,7 @@ async function handleEditSubmit(values: Record<string, any>) {
           {navOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
         <strong style={{ fontSize: "1.02rem" }}>
-          {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label ?? "Buspulse"}
+          {sectionLabel(section) ?? "Buspulse"}
         </strong>
       </header>
       {navOpen && <div className="admin-backdrop" onClick={() => setNavOpen(false)} />}
@@ -498,6 +505,9 @@ async function handleEditSubmit(values: Record<string, any>) {
           <>
         <p className="nav-group-label">الأسطول</p>
         <Link href="/admin/settings" className="nav-item"><Settings size={17} />إعدادات الأسطول</Link>
+        <button onClick={() => setSection("bulkImport")} className={`nav-item ${section === "bulkImport" ? "active" : ""}`}>
+          <FileSpreadsheet size={17} />استيراد شامل
+        </button>
         {isPlatformAdmin && <Link href="/platform" className="nav-item"><Building2 size={17} />إدارة المنصة</Link>}
 
         <p className="nav-group-label">بوت الواتساب</p>
@@ -538,7 +548,7 @@ async function handleEditSubmit(values: Record<string, any>) {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
           <h2 style={{ fontSize: "1.25rem", margin: 0, color: "var(--navy)" }}>
-            {[...CORE_SECTIONS, ...WA_SECTIONS].find((s) => s.id === section)?.label}
+            {sectionLabel(section)}
           </h2>
 {fields && (
   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -573,6 +583,8 @@ async function handleEditSubmit(values: Record<string, any>) {
   <RegistrationRequestsPanel />
 ) : section === "reports" ? (
   <ReportsPanel />
+) : section === "bulkImport" ? (
+  fleetId ? <BulkImportPanel fleetId={fleetId} /> : <p style={{ color: "var(--steel)" }}>تعذّر تحديد الأسطول الحالي.</p>
 ) : (
           SECTION_QUERY[section] && (
             <SimpleTable
