@@ -16,6 +16,7 @@ export interface AppUser {
   guardian_id: string | null;
   tenant_id: string | null;
   must_change_password?: boolean;
+  default_section?: string | null;
 }
 
 export interface Bus {
